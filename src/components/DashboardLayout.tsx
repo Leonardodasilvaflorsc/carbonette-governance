@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Building2 } from 'lucide-react';
+import { Home, BarChart2, FileText, Leaf, Settings, LogOut } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
-  { icon: Building2, label: 'Gerenciar Empresa', href: '/company' },
   { icon: BarChart2, label: 'Emissions', href: '/emissions' },
   { icon: FileText, label: 'Inventory', href: '/inventory' },
   { icon: Leaf, label: 'Projects', href: '/projects' },

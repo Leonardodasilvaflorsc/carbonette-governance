@@ -67,14 +67,6 @@ function App() {
               }
             />
             <Route
-              path="/company"
-              element={
-                <PrivateRoute>
-                  <Index />
-                </PrivateRoute>
-              }
-            />
-            <Route
               path="/inventory"
               element={
                 <PrivateRoute>
