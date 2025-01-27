@@ -20,7 +20,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               <img 
                 src="/lovable-uploads/18e53ad3-4ac1-4034-a09d-71f57f4f219c.png" 
                 alt="Inctus Logo" 
-                className="h-8 w-auto"
+                className="h-12 w-auto" // Aumentado de h-8 para h-12
               />
             </div>
             <SidebarGroup>
