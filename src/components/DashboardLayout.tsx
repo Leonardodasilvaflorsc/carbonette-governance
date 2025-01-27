@@ -31,22 +31,29 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       <div className="min-h-screen flex w-full bg-background">
         <Sidebar>
           <SidebarContent>
-            <div className="px-4 py-6">
+            <div className="px-4 py-6 transition-all duration-300 ease-in-out hover:opacity-90">
               <img 
                 src="/lovable-uploads/18e53ad3-4ac1-4034-a09d-71f57f4f219c.png" 
                 alt="Inctus Logo" 
-                className="h-16 w-auto"
+                className="h-16 w-auto transform transition-transform duration-300 hover:scale-105"
               />
             </div>
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {menuItems.map((item) => (
+                  {menuItems.map((item, index) => (
                     <SidebarMenuItem key={item.label}>
                       <SidebarMenuButton asChild>
-                        <a href={item.href} className="flex items-center gap-3">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.label}</span>
+                        <a 
+                          href={item.href} 
+                          className="flex items-center gap-3 transition-all duration-200 ease-in-out hover:bg-primary-100 group"
+                          style={{
+                            animationDelay: `${index * 50}ms`,
+                            animation: 'fade-in 0.5s ease-out forwards'
+                          }}
+                        >
+                          <item.icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-500" />
+                          <span className="transition-colors duration-300 group-hover:text-primary-500">{item.label}</span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -57,9 +64,9 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             <div className="mt-auto p-4">
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-all duration-300 ease-in-out transform hover:translate-x-1 group"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
                 <span>Logout</span>
               </button>
             </div>
