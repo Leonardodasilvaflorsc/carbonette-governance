@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, FileText, Save, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -37,17 +38,30 @@ const Inventory = () => {
     setInput('');
     setIsLoading(true);
 
-    // Here we'll add the AI integration later
-    // For now, just add a placeholder response
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-inventory', {
+        body: { message: input }
+      });
+
+      if (error) throw error;
+
       const assistantMessage = {
         role: 'assistant' as const,
-        content: 'Esta é uma resposta temporária. A integração com IA será implementada em breve.',
+        content: data.response,
         timestamp: new Date()
       };
+
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível processar sua mensagem. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const quickActions = [
