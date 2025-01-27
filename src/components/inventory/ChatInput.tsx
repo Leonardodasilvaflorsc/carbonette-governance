@@ -22,8 +22,13 @@ export const ChatInput = ({ input, setInput, handleSendMessage, isLoading }: Cha
               handleSendMessage();
             }
           }}
+          className="text-sm"
         />
-        <Button onClick={handleSendMessage} disabled={isLoading}>
+        <Button 
+          onClick={handleSendMessage} 
+          disabled={isLoading}
+          className="px-3 md:px-4"
+        >
           <Send className="h-4 w-4" />
         </Button>
       </div>
