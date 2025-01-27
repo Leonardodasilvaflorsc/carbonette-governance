@@ -17,7 +17,11 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         <Sidebar>
           <SidebarContent>
             <div className="px-4 py-6">
-              <h1 className="text-xl font-bold text-primary">Inctus Carbon</h1>
+              <img 
+                src="/lovable-uploads/18e53ad3-4ac1-4034-a09d-71f57f4f219c.png" 
+                alt="Inctus Logo" 
+                className="h-8 w-auto"
+              />
             </div>
             <SidebarGroup>
               <SidebarGroupContent>
