@@ -9,7 +9,7 @@ import { EmissionsInsights } from "@/components/EmissionsInsights";
 const Emissions = () => {
   return (
     <DashboardLayout>
-      <div className="space-y-4 md:space-y-6">
+      <div className="space-y-6">
         <EmissionsHeader />
         <EmissionsSummary />
         <EmissionsChart />

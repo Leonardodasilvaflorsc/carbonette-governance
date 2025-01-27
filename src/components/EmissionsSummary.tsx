@@ -3,7 +3,7 @@ import { Factory, Zap, Truck } from "lucide-react";
 
 export const EmissionsSummary = () => {
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatsCard
         title="Escopo 1"
         value="1,234"

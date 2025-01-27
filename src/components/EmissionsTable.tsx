@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useIsMobile } from '@/hooks/use-mobile';
 
 const data = [
   {
@@ -36,28 +35,26 @@ const data = [
 ];
 
 export const EmissionsTable = () => {
-  const isMobile = useIsMobile();
-
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="whitespace-nowrap">Período</TableHead>
-            {!isMobile && <TableHead className="whitespace-nowrap">Categoria</TableHead>}
-            <TableHead className="whitespace-nowrap">Escopo</TableHead>
-            {!isMobile && <TableHead className="whitespace-nowrap">Fator de Emissão</TableHead>}
-            <TableHead className="text-right whitespace-nowrap">Emissões (t CO₂e)</TableHead>
+            <TableHead>Período</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Escopo</TableHead>
+            <TableHead>Fator de Emissão</TableHead>
+            <TableHead className="text-right">Emissões (t CO₂e)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((row) => (
             <TableRow key={row.id}>
-              <TableCell className="whitespace-nowrap">{row.period}</TableCell>
-              {!isMobile && <TableCell>{row.category}</TableCell>}
-              <TableCell className="whitespace-nowrap">{row.scope}</TableCell>
-              {!isMobile && <TableCell>{row.emissionFactor}</TableCell>}
-              <TableCell className="text-right whitespace-nowrap">{row.emissions}</TableCell>
+              <TableCell>{row.period}</TableCell>
+              <TableCell>{row.category}</TableCell>
+              <TableCell>{row.scope}</TableCell>
+              <TableCell>{row.emissionFactor}</TableCell>
+              <TableCell className="text-right">{row.emissions}</TableCell>
             </TableRow>
           ))}
         </TableBody>
