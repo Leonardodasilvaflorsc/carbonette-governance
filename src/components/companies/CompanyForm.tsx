@@ -14,9 +14,18 @@ export const CompanyForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     setLoading(true);
 
     try {
+      // Primeiro, obtemos o usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Agora inserimos a empresa com o user_id
       const { error } = await supabase
         .from("companies")
-        .insert([{ name }]);
+        .insert({
+          name,
+          user_id: user.id
+        });
 
       if (error) throw error;
 
