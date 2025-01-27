@@ -97,7 +97,7 @@ const Inventory = () => {
         <div className="flex flex-1 gap-4">
           <div className="flex-1 border rounded-lg p-4 bg-white">
             <ScrollArea className="h-[calc(100vh-16rem)]">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -106,17 +106,19 @@ const Inventory = () => {
                     }`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
+                      className={`max-w-[80%] rounded-lg p-4 ${
                         message.role === 'user'
-                          ? 'bg-primary text-white'
-                          : 'bg-accent text-gray-900'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-secondary/50 text-gray-900 shadow-sm'
                       }`}
                     >
-                      <div className="text-sm font-medium mb-1">
+                      <div className="text-sm font-medium mb-2">
                         {message.role === 'user' ? 'Você' : 'Inctus IA'}
                       </div>
-                      {message.content}
-                      <div className="text-xs opacity-70 mt-1">
+                      <div className="leading-relaxed whitespace-pre-line">
+                        {message.content}
+                      </div>
+                      <div className="text-xs opacity-70 mt-2">
                         {message.timestamp.toLocaleTimeString()}
                       </div>
                     </div>
@@ -124,8 +126,8 @@ const Inventory = () => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-accent rounded-lg p-3 text-gray-900">
-                      Digitando...
+                    <div className="bg-secondary/50 rounded-lg p-4 text-gray-900">
+                      <div className="animate-pulse">Digitando...</div>
                     </div>
                   </div>
                 )}
