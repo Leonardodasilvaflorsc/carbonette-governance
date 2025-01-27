@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Emissions from "./pages/Emissions";
@@ -21,29 +22,40 @@ const queryClient = new QueryClient({
 });
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session:", session);
       setSession(session);
       setLoading(false);
     });
 
+    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", session);
       setSession(session);
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  // Show loading state
   if (loading) {
-    return null;
+    return <div>Loading...</div>;
   }
 
+  // Redirect to auth if no session
   if (!session) {
+    console.log("No session found, redirecting to /auth");
     return <Navigate to="/auth" replace />;
   }
 
