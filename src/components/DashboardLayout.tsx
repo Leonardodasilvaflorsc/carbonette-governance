@@ -31,7 +31,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background">
-        <Sidebar className="group transition-all duration-300 hover:w-64">
+        <Sidebar className="group transition-all duration-300 hover:w-64 md:hover:w-64">
           <SidebarContent>
             <div className="px-4 py-6 transition-all duration-300 ease-in-out hover:opacity-90">
               <img 
