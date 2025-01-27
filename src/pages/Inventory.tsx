@@ -10,7 +10,6 @@ import { ChatInput } from "@/components/inventory/ChatInput";
 import { QuickActions } from "@/components/inventory/QuickActions";
 import { InventoryStatus } from "@/components/inventory/InventoryStatus";
 import type { Message } from "@/types/chat";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const Inventory = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -23,7 +22,6 @@ const Inventory = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
@@ -65,7 +63,7 @@ const Inventory = () => {
   };
 
   const quickActions = [
-    { label: "Inserir Dados", action: () => setInput("Quero inserir dados de emissões") },
+    { label: "Inserir Dados de Emissões", action: () => setInput("Quero inserir dados de emissões") },
     { label: "Revisar Escopo 2", action: () => setInput("Quero revisar o Escopo 2") },
     { label: "Gerar Inventário", action: () => setInput("Gerar inventário completo agora") },
   ];
@@ -73,40 +71,28 @@ const Inventory = () => {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-2rem)] flex flex-col space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Inventário de Emissões</h1>
-            <p className="text-sm md:text-base text-gray-500">Converse com a IA para criar seu inventário</p>
+            <h1 className="text-3xl font-bold text-gray-900">Inventário de Emissões</h1>
+            <p className="text-gray-500">Converse com a IA para criar seu inventário</p>
           </div>
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Button 
-              variant="outline" 
-              className="flex-1 md:flex-none text-sm"
-              onClick={() => toast({ title: "Inventário salvo", description: "Seus dados foram salvos com sucesso!" })}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {!isMobile && "Salvar Inventário"}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => toast({ title: "Inventário salvo", description: "Seus dados foram salvos com sucesso!" })}>
+              <Save className="mr-2" />
+              Salvar Inventário
             </Button>
-            <Button 
-              variant="outline"
-              className="flex-1 md:flex-none text-sm"
-              onClick={() => toast({ title: "Relatório gerado", description: "Seu relatório foi gerado com sucesso!" })}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              {!isMobile && "Gerar Relatório"}
+            <Button variant="outline" onClick={() => toast({ title: "Relatório gerado", description: "Seu relatório foi gerado com sucesso!" })}>
+              <FileText className="mr-2" />
+              Gerar Relatório
             </Button>
-            <Button 
-              variant="outline"
-              className="flex-1 md:flex-none text-sm"
-              onClick={() => toast({ title: "Novo projeto", description: "Iniciando criação de projeto..." })}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {!isMobile && "Criar Projeto"}
+            <Button variant="outline" onClick={() => toast({ title: "Novo projeto", description: "Iniciando criação de projeto..." })}>
+              <Plus className="mr-2" />
+              Criar Projeto
             </Button>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row flex-1 gap-4">
+        <div className="flex flex-1 gap-4">
           <div className="flex-1 border rounded-lg p-4 bg-white">
             <ScrollArea className="h-[calc(100vh-16rem)]">
               <div className="space-y-6">
@@ -134,7 +120,7 @@ const Inventory = () => {
             </div>
           </div>
 
-          {!isMobile && <InventoryStatus />}
+          <InventoryStatus />
         </div>
       </div>
     </DashboardLayout>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, BarChart2, FileText, Leaf, Settings, LogOut } from 'lucide-react';
+import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Menu } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from './ui/button';
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
@@ -29,9 +30,9 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   };
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
-        <Sidebar className="group transition-all duration-300 hover:w-64">
+        <Sidebar className="transition-all duration-300">
           <SidebarContent>
             <div className="px-4 py-6 transition-all duration-300 ease-in-out hover:opacity-90">
               <img 
@@ -48,14 +49,14 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                       <SidebarMenuButton asChild>
                         <a 
                           href={item.href} 
-                          className="flex items-center gap-3 p-2 transition-all duration-200 ease-in-out hover:bg-primary/10 group"
+                          className="flex items-center gap-3 p-2 transition-all duration-200 ease-in-out hover:bg-primary-100 group"
                           style={{
                             animationDelay: `${index * 50}ms`,
                             animation: 'fade-in 0.5s ease-out forwards'
                           }}
                         >
-                          <item.icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary" />
-                          <span className="transition-colors duration-300 group-hover:text-primary whitespace-nowrap opacity-0 group-hover:opacity-100">{item.label}</span>
+                          <item.icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-500" />
+                          <span className="transition-colors duration-300 group-hover:text-primary-500">{item.label}</span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -69,7 +70,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-all duration-300 ease-in-out transform hover:translate-x-1 group w-full"
               >
                 <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
-                <span className="opacity-0 group-hover:opacity-100 whitespace-nowrap">Logout</span>
+                <span>Logout</span>
               </button>
             </div>
           </SidebarContent>
