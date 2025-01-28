@@ -10,11 +10,13 @@ import {
   SidebarMenu, 
   SidebarMenuButton, 
   SidebarMenuItem,
-  SidebarTrigger
+  SidebarTrigger,
+  useSidebar
 } from "@/components/ui/sidebar";
-import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Menu } from 'lucide-react';
+import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
@@ -26,6 +28,7 @@ const menuItems = [
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const { state, toggleSidebar } = useSidebar();
 
   const handleLogout = async () => {
     try {
@@ -55,6 +58,20 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 alt="Inctus Logo" 
                 className="h-16 w-auto transform transition-transform duration-300 hover:scale-105"
               />
+            </div>
+            <div className="flex justify-end px-4 mb-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="hidden md:flex hover:bg-primary-100 transition-colors"
+              >
+                {state === 'expanded' ? (
+                  <ChevronLeft className="h-4 w-4 text-gray-600" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-gray-600" />
+                )}
+              </Button>
             </div>
             <SidebarGroup>
               <SidebarGroupContent>
