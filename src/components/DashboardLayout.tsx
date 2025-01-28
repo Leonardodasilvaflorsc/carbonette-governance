@@ -47,8 +47,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           </SidebarTrigger>
         </div>
 
-        <Sidebar className="border-r border-gray-200">
-          <SidebarContent>
+        <Sidebar className="border-r border-gray-200 bg-white">
+          <SidebarContent className="bg-secondary-100">
             <div className="px-4 py-6 transition-all duration-300 ease-in-out hover:opacity-90">
               <img 
                 src="/lovable-uploads/18e53ad3-4ac1-4034-a09d-71f57f4f219c.png" 
