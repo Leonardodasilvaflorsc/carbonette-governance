@@ -33,6 +33,87 @@ export type Database = {
         }
         Relationships: []
       }
+      emission_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          scope: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          scope: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          scope?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      emission_records: {
+        Row: {
+          activity_data: number
+          category_id: string
+          company_id: string
+          created_at: string
+          emission_factor: number
+          emissions: number
+          id: string
+          notes: string | null
+          period: string
+          updated_at: string
+        }
+        Insert: {
+          activity_data: number
+          category_id: string
+          company_id: string
+          created_at?: string
+          emission_factor: number
+          emissions: number
+          id?: string
+          notes?: string | null
+          period: string
+          updated_at?: string
+        }
+        Update: {
+          activity_data?: number
+          category_id?: string
+          company_id?: string
+          created_at?: string
+          emission_factor?: number
+          emissions?: number
+          id?: string
+          notes?: string | null
+          period?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emission_records_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "emission_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emission_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventories: {
         Row: {
           company_id: string
