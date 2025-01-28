@@ -1,7 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Home, BarChart2, FileText, Leaf, Settings, LogOut } from 'lucide-react';
+import { 
+  SidebarProvider, 
+  Sidebar, 
+  SidebarContent, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarGroupLabel, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem,
+  SidebarTrigger
+} from "@/components/ui/sidebar";
+import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Menu } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -29,7 +40,14 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
-        <Sidebar>
+        {/* Mobile Menu Trigger */}
+        <div className="fixed top-4 left-4 z-50 md:hidden">
+          <SidebarTrigger className="bg-white shadow-md rounded-md">
+            <Menu className="h-4 w-4" />
+          </SidebarTrigger>
+        </div>
+
+        <Sidebar className="border-r border-gray-200">
           <SidebarContent>
             <div className="px-4 py-6 transition-all duration-300 ease-in-out hover:opacity-90">
               <img 
@@ -64,7 +82,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             <div className="mt-auto p-4">
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-all duration-300 ease-in-out transform hover:translate-x-1 group"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-all duration-300 ease-in-out transform hover:translate-x-1 group w-full"
               >
                 <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
                 <span>Logout</span>
@@ -72,7 +90,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             </div>
           </SidebarContent>
         </Sidebar>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pt-16 md:pt-0">
           <div className="container py-6">
             {children}
           </div>
