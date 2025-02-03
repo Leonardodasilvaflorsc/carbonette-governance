@@ -29,7 +29,7 @@ export const EmissionsActions = () => {
       const { error } = await supabase
         .from('emission_records')
         .delete()
-        .is('id', 'is not null'); // This will match all records while maintaining proper UUID type checking
+        .not('id', 'is', null);
 
       if (error) throw error;
 
