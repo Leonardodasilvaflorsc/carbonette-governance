@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,12 +27,14 @@ export const InventoryStatus = () => {
   // Fetch emission categories when scope changes
   const fetchCategories = async (scope: number) => {
     try {
+      console.log('Fetching categories for scope:', scope);
       const { data, error } = await supabase
         .from('emission_categories')
         .select('*')
         .eq('scope', scope);
 
       if (error) throw error;
+      console.log('Categories fetched:', data);
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -44,16 +46,22 @@ export const InventoryStatus = () => {
     }
   };
 
+  useEffect(() => {
+    fetchCategories(parseInt(selectedScope));
+  }, [selectedScope]);
+
   // Handle scope change
   const handleScopeChange = (value: "1" | "2" | "3") => {
+    console.log('Scope changed to:', value);
     setSelectedScope(value);
-    fetchCategories(parseInt(value));
   };
 
   // Handle form submission
   const onSubmit = async (data: EmissionFormData) => {
     setIsLoading(true);
     try {
+      console.log('Submitting emission record:', data);
+      
       // Get the user's company first
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
@@ -78,12 +86,23 @@ export const InventoryStatus = () => {
 
       if (error) throw error;
 
+      console.log('Emission record saved successfully');
+      
       toast({
         title: "Sucesso",
         description: "Registro de emissão salvo com sucesso!"
       });
 
-      reset();
+      // Reset form after successful submission
+      reset({
+        scope: selectedScope,
+        category_id: "",
+        activity_data: 0,
+        emission_factor: 0,
+        period: "",
+        notes: ""
+      });
+
     } catch (error) {
       console.error('Error saving emission record:', error);
       toast({
@@ -136,6 +155,9 @@ export const InventoryStatus = () => {
               </option>
             ))}
           </select>
+          {errors.category_id && (
+            <p className="text-sm text-red-500">Categoria é obrigatória</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -144,6 +166,9 @@ export const InventoryStatus = () => {
             type="date"
             {...register("period", { required: true })}
           />
+          {errors.period && (
+            <p className="text-sm text-red-500">Período é obrigatório</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -154,6 +179,9 @@ export const InventoryStatus = () => {
             {...register("activity_data", { required: true, min: 0 })}
             placeholder="Ex: 100"
           />
+          {errors.activity_data && (
+            <p className="text-sm text-red-500">Dados de atividade são obrigatórios</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -164,6 +192,9 @@ export const InventoryStatus = () => {
             {...register("emission_factor", { required: true, min: 0 })}
             placeholder="Ex: 0.5"
           />
+          {errors.emission_factor && (
+            <p className="text-sm text-red-500">Fator de emissão é obrigatório</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -176,7 +207,7 @@ export const InventoryStatus = () => {
 
         <Button 
           type="submit" 
-          className="w-full"
+          className="w-full bg-green-500 hover:bg-green-600"
           disabled={isLoading}
         >
           {isLoading ? "Salvando..." : "Salvar Registro"}
