@@ -56,6 +56,24 @@ export const InventoryStatus = () => {
     setSelectedScope(value);
   };
 
+  // Handle form clear
+  const handleClearForm = () => {
+    console.log('Clearing form data');
+    reset({
+      scope: "1",
+      category_id: "",
+      activity_data: 0,
+      emission_factor: 0,
+      period: "",
+      notes: ""
+    });
+    setSelectedScope("1");
+    toast({
+      title: "Formulário Limpo",
+      description: "Todos os campos foram limpos com sucesso!"
+    });
+  };
+
   // Handle form submission
   const onSubmit = async (data: EmissionFormData) => {
     setIsLoading(true);
@@ -120,7 +138,6 @@ export const InventoryStatus = () => {
       <h2 className="text-lg md:text-xl font-semibold mb-4">Registro de Emissões</h2>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
           <Label>Escopo</Label>
           <RadioGroup
             defaultValue="1"
@@ -140,7 +157,6 @@ export const InventoryStatus = () => {
               <Label htmlFor="scope3">Escopo 3</Label>
             </div>
           </RadioGroup>
-        </div>
 
         <div className="space-y-2">
           <Label>Categoria</Label>
@@ -205,13 +221,23 @@ export const InventoryStatus = () => {
           />
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full bg-green-500 hover:bg-green-600"
-          disabled={isLoading}
-        >
-          {isLoading ? "Salvando..." : "Salvar Registro"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            type="submit" 
+            className="flex-1 bg-green-500 hover:bg-green-600"
+            disabled={isLoading}
+          >
+            {isLoading ? "Salvando..." : "Salvar Registro"}
+          </Button>
+          <Button 
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={handleClearForm}
+          >
+            Limpar
+          </Button>
+        </div>
       </form>
     </div>
   );
