@@ -24,10 +24,12 @@ export const EmissionsActions = () => {
       console.log('Iniciando limpeza dos registros de emissões...');
       setIsDeleting(true);
 
+      // Delete all emission records for the current user's company
+      // RLS policies will ensure only records belonging to the user's company are deleted
       const { error } = await supabase
         .from('emission_records')
         .delete()
-        .neq('id', ''); // Deleta todos os registros
+        .is('id', 'is not null'); // This will match all records while maintaining proper UUID type checking
 
       if (error) throw error;
 
