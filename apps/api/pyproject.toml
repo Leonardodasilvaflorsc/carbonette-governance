@@ -1,0 +1,53 @@
+[project]
+name = "orbital-api"
+version = "0.1.0"
+description = "ORBITAL-GHG — API de inteligência de emissões via satélite"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "asyncpg>=0.29",
+    "redis>=5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.6",
+]
+# Pipeline científico — instalado a partir da FASE 3 (mantém a imagem leve agora)
+science = [
+    "xarray",
+    "rioxarray",
+    "netCDF4",
+    "numpy",
+    "scipy",
+    "geopandas",
+    "shapely",
+]
+# Workers assíncronos — FASE 3+
+workers = [
+    "celery>=5.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
