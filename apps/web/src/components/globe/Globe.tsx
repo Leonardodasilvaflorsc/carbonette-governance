@@ -6,6 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useGlobeStore } from "@/state/globeStore";
 import { CINEMATIC_FLY } from "@/lib/map";
 import { useGibsMap } from "./useGibsMap";
+import { useFacilitiesOverlay } from "./useFacilitiesOverlay";
 
 export default function Globe() {
   const gasKey = useGlobeStore((s) => s.gasKey);
@@ -15,6 +16,8 @@ export default function Globe() {
 
   const { containerRef, mapRef, ready } = useGibsMap({ gasKey, date, opacity });
   const rotatingRef = useRef(true);
+
+  useFacilitiesOverlay(mapRef, ready);
 
   useEffect(() => {
     const map = mapRef.current;

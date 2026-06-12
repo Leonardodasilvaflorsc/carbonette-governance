@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from contextlib import asynccontextmanager
 
 import asyncpg
 import redis.asyncio as aioredis
@@ -7,14 +9,50 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from app.db import create_pool, run_migrations
+from app.providers.mock import fixture_facilities
+from app.routers import facilities
+from app.stores.facilities import FacilityStore, InMemoryFacilityStore, PostgisFacilityStore
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+async def build_facility_store() -> FacilityStore:
+    """Escolhe o store conforme FACILITY_BACKEND e disponibilidade do banco.
+
+    Modo "auto" degrada para fixtures em memória quando o PostGIS está
+    inalcançável (dev offline) — as respostas declaram source="mock".
+    """
+    if settings.facility_backend != "mock":
+        try:
+            pool = await create_pool(settings.database_url)
+            await run_migrations(pool)
+            return PostgisFacilityStore(pool)
+        except Exception as e:
+            if settings.facility_backend == "db":
+                raise
+            logger.warning("PostGIS indisponível (%s); usando fixtures em memória", e)
+    return InMemoryFacilityStore(fixture_facilities(settings.facility_ref_year))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.facility_store = await build_facility_store()
+    yield
+    store = app.state.facility_store
+    if isinstance(store, PostgisFacilityStore):
+        await store.pool.close()
+
 
 app = FastAPI(
     title=f"{settings.app_name} API",
     description="Inteligência de emissões de gases de efeito estufa via satélite",
     version="0.1.0",
+    lifespan=lifespan,
 )
+
+app.include_router(facilities.router)
 
 app.add_middleware(
     CORSMiddleware,

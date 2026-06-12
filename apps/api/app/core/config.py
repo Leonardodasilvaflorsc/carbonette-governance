@@ -16,6 +16,13 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # --- Atlas de Emissores (FASE 2) ---
+    climate_trace_api_url: str = "https://api.climatetrace.org/v6"
+    # auto: usa PostGIS se alcançável, senão fixtures em memória (dev offline)
+    facility_backend: str = "auto"  # auto | db | mock
+    facility_countries: list[str] = ["BRA"]
+    facility_ref_year: int = 2024
+
 
 @lru_cache
 def get_settings() -> Settings:

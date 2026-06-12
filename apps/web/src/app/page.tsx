@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Providers from "@/components/Providers";
+import AtlasPanel from "@/components/panels/AtlasPanel";
 import ControlPanel from "@/components/panels/ControlPanel";
+import FacilityCard from "@/components/panels/FacilityCard";
 import Legend from "@/components/panels/Legend";
 import SearchBox from "@/components/panels/SearchBox";
 import { useGlobeStore } from "@/state/globeStore";
@@ -40,6 +42,13 @@ function Workspace() {
       <aside className="absolute bottom-10 left-4 z-10">
         <Legend />
       </aside>
+
+      {!compare && (
+        <aside className="absolute right-4 top-24 z-10 flex w-80 flex-col gap-3">
+          <FacilityCard />
+          <AtlasPanel />
+        </aside>
+      )}
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Facility } from "@/lib/api";
 import {
   GIBS_LAYERS,
   type DiscoveredLayer,
@@ -37,6 +38,13 @@ interface GlobeState {
   metaSource: "capabilities" | "fallback" | null;
   cameraTarget: CameraTarget | null;
 
+  // --- Atlas de Emissores (FASE 2) ---
+  showFacilities: boolean;
+  sector: string | null;
+  selectedFacility: Facility | null;
+  viewportBbox: string | null;
+  atlasSource: "db" | "mock" | null;
+
   setGas: (key: GasLayerKey | null) => void;
   setDate: (date: string) => void;
   setDateB: (date: string) => void;
@@ -45,6 +53,12 @@ interface GlobeState {
   setLayersMeta: (meta: LayersMeta, source: "capabilities" | "fallback") => void;
   flyTo: (center: [number, number], zoom: number) => void;
   applyPreset: (preset: GlobePreset) => void;
+
+  setShowFacilities: (show: boolean) => void;
+  setSector: (sector: string | null) => void;
+  selectFacility: (facility: Facility | null) => void;
+  setViewportBbox: (bbox: string) => void;
+  setAtlasSource: (source: "db" | "mock") => void;
 }
 
 const initialGas: GasLayerKey = "NO2";
@@ -59,6 +73,12 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
   layersMeta: null,
   metaSource: null,
   cameraTarget: null,
+
+  showFacilities: true,
+  sector: null,
+  selectedFacility: null,
+  viewportBbox: null,
+  atlasSource: null,
 
   setGas: (key) => {
     if (key === null) {
@@ -104,4 +124,10 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
     get().setGas(preset.gas);
     get().flyTo(preset.center, preset.zoom);
   },
+
+  setShowFacilities: (showFacilities) => set({ showFacilities }),
+  setSector: (sector) => set({ sector }),
+  selectFacility: (selectedFacility) => set({ selectedFacility }),
+  setViewportBbox: (viewportBbox) => set({ viewportBbox }),
+  setAtlasSource: (atlasSource) => set({ atlasSource }),
 }));

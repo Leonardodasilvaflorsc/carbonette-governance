@@ -50,6 +50,20 @@ pnpm install
 pnpm dev          # http://localhost:3000
 ```
 
+## Atlas de Emissores (Climate TRACE)
+
+Sincronize o inventário por instalação para o PostGIS (job idempotente,
+recomendado mensal):
+
+```sh
+cd apps/api
+python -m app.jobs.ingest_facilities          # API real (requer rede)
+python -m app.jobs.ingest_facilities --mock   # fixtures de demonstração
+```
+
+Sem banco alcançável a API serve fixtures em memória e declara
+`source: "mock"` nas respostas — a UI exibe o aviso correspondente.
+
 ## Testes e qualidade
 
 ```sh
