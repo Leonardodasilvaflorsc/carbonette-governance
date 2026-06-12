@@ -45,6 +45,12 @@ interface GlobeState {
   viewportBbox: string | null;
   atlasSource: "db" | "mock" | null;
 
+  // --- Análise Quantitativa (FASE 3) ---
+  drawingAoi: boolean;
+  draftVertices: [number, number][];
+  selectedAoiId: string | null;
+  analysisJobId: string | null;
+
   setGas: (key: GasLayerKey | null) => void;
   setDate: (date: string) => void;
   setDateB: (date: string) => void;
@@ -59,6 +65,13 @@ interface GlobeState {
   selectFacility: (facility: Facility | null) => void;
   setViewportBbox: (bbox: string) => void;
   setAtlasSource: (source: "db" | "mock") => void;
+
+  startDrawingAoi: () => void;
+  addDraftVertex: (v: [number, number]) => void;
+  finishDrawingAoi: () => void;
+  clearDraftAoi: () => void;
+  selectAoi: (id: string | null) => void;
+  setAnalysisJobId: (id: string | null) => void;
 }
 
 const initialGas: GasLayerKey = "NO2";
@@ -79,6 +92,11 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
   selectedFacility: null,
   viewportBbox: null,
   atlasSource: null,
+
+  drawingAoi: false,
+  draftVertices: [],
+  selectedAoiId: null,
+  analysisJobId: null,
 
   setGas: (key) => {
     if (key === null) {
@@ -130,4 +148,17 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
   selectFacility: (selectedFacility) => set({ selectedFacility }),
   setViewportBbox: (viewportBbox) => set({ viewportBbox }),
   setAtlasSource: (atlasSource) => set({ atlasSource }),
+
+  startDrawingAoi: () => set({ drawingAoi: true, draftVertices: [], selectedFacility: null }),
+  addDraftVertex: (v) => set((s) => ({ draftVertices: [...s.draftVertices, v] })),
+  finishDrawingAoi: () =>
+    set((s) =>
+      // polígono válido precisa de 3+ vértices; senão descarta o rascunho
+      s.draftVertices.length >= 3
+        ? { drawingAoi: false }
+        : { drawingAoi: false, draftVertices: [] }
+    ),
+  clearDraftAoi: () => set({ drawingAoi: false, draftVertices: [] }),
+  selectAoi: (selectedAoiId) => set({ selectedAoiId, analysisJobId: null }),
+  setAnalysisJobId: (analysisJobId) => set({ analysisJobId }),
 }));

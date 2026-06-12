@@ -7,6 +7,7 @@ import { useGlobeStore } from "@/state/globeStore";
 import { CINEMATIC_FLY } from "@/lib/map";
 import { useGibsMap } from "./useGibsMap";
 import { useFacilitiesOverlay } from "./useFacilitiesOverlay";
+import { useAoiDraw } from "./useAoiDraw";
 
 export default function Globe() {
   const gasKey = useGlobeStore((s) => s.gasKey);
@@ -18,6 +19,7 @@ export default function Globe() {
   const rotatingRef = useRef(true);
 
   useFacilitiesOverlay(mapRef, ready);
+  useAoiDraw(mapRef, ready);
 
   useEffect(() => {
     const map = mapRef.current;

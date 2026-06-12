@@ -29,9 +29,13 @@ science = [
     "geopandas",
     "shapely",
 ]
-# Workers assíncronos — FASE 3+
+# Workers assíncronos (celery -A app.workers.celery_app worker)
 workers = [
     "celery>=5.4",
+]
+# Google Earth Engine (provider quantitativo do MVP)
+gee = [
+    "earthengine-api>=1.0",
 ]
 
 [tool.ruff]

@@ -10,12 +10,44 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.db import create_pool, run_migrations
+from app.providers.emissions_data import EmissionsDataProvider, SyntheticEmissionsProvider
 from app.providers.mock import fixture_facilities
-from app.routers import facilities
+from app.routers import aois, facilities
+from app.services.analysis import AnalysisService
+from app.services.runner import CeleryRunner, LocalRunner
+from app.stores.analysis import InMemoryAnalysisStore, PostgisAnalysisStore
 from app.stores.facilities import FacilityStore, InMemoryFacilityStore, PostgisFacilityStore
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def build_emissions_provider() -> EmissionsDataProvider:
+    """GEE se configurado/instalável; senão sintético (declarado na UI)."""
+    if settings.emissions_provider in ("auto", "gee") and settings.gee_service_account_key_file:
+        try:
+            from app.providers.gee import GEEEmissionsProvider
+
+            return GEEEmissionsProvider(
+                settings.gee_service_account_email, settings.gee_service_account_key_file
+            )
+        except Exception as e:
+            if settings.emissions_provider == "gee":
+                raise
+            logger.warning("GEE indisponível (%s); usando provider sintético", e)
+    return SyntheticEmissionsProvider()
+
+
+async def _redis_ok() -> bool:
+    try:
+        client = aioredis.from_url(settings.redis_url)
+        try:
+            await asyncio.wait_for(client.ping(), timeout=2)
+            return True
+        finally:
+            await client.aclose()
+    except Exception:
+        return False
 
 
 async def build_facility_store() -> FacilityStore:
@@ -39,10 +71,27 @@ async def build_facility_store() -> FacilityStore:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.facility_store = await build_facility_store()
+
+    # Análise quantitativa: store compartilha o pool do atlas quando há DB
+    facility_store = app.state.facility_store
+    if isinstance(facility_store, PostgisFacilityStore):
+        analysis_store = PostgisAnalysisStore(facility_store.pool)
+    else:
+        analysis_store = InMemoryAnalysisStore()
+    service = AnalysisService(analysis_store, build_emissions_provider())
+    app.state.analysis_service = service
+
+    use_celery = settings.analysis_runner == "celery" or (
+        settings.analysis_runner == "auto"
+        and isinstance(analysis_store, PostgisAnalysisStore)
+        and await _redis_ok()
+    )
+    app.state.analysis_runner = CeleryRunner() if use_celery else LocalRunner(service)
+    logger.info("runner de análise: %s", app.state.analysis_runner.name)
+
     yield
-    store = app.state.facility_store
-    if isinstance(store, PostgisFacilityStore):
-        await store.pool.close()
+    if isinstance(facility_store, PostgisFacilityStore):
+        await facility_store.pool.close()
 
 
 app = FastAPI(
@@ -53,6 +102,7 @@ app = FastAPI(
 )
 
 app.include_router(facilities.router)
+app.include_router(aois.router)
 
 app.add_middleware(
     CORSMiddleware,

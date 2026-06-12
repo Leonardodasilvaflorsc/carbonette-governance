@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Providers from "@/components/Providers";
+import AnalysisPanel from "@/components/panels/AnalysisPanel";
 import AtlasPanel from "@/components/panels/AtlasPanel";
 import ControlPanel from "@/components/panels/ControlPanel";
 import FacilityCard from "@/components/panels/FacilityCard";
@@ -35,8 +36,9 @@ function Workspace() {
         </div>
       </header>
 
-      <aside className="absolute left-4 top-24 z-10">
+      <aside className="absolute bottom-32 left-4 top-24 z-10 flex w-72 flex-col gap-3 overflow-y-auto pr-1">
         <ControlPanel />
+        {!compare && <AnalysisPanel />}
       </aside>
 
       <aside className="absolute bottom-10 left-4 z-10">

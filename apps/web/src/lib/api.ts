@@ -44,6 +44,75 @@ export function fetchSectors() {
   return getJson<{ sectors: string[] }>("/facilities/sectors", {});
 }
 
+// --- Análise Quantitativa (FASE 3) ---
+
+export interface GeoPolygon {
+  type: "Polygon";
+  coordinates: number[][][];
+}
+
+export interface Aoi {
+  id: string;
+  name: string;
+  geometry: GeoPolygon;
+}
+
+export interface AnalyzedPoint {
+  date: string;
+  value: number | null;
+  unit: string;
+  qa_fraction: number | null;
+  n_obs: number | null;
+  background: number | null;
+  climatology: number | null;
+  zscore: number | null;
+  anomaly: boolean;
+}
+
+export interface AnalysisJob {
+  id: string;
+  aoi_id: string;
+  params: { gas: string; start: string; end: string };
+  status: "pending" | "running" | "done" | "error";
+  product: string | null;
+  error: string | null;
+  result: AnalyzedPoint[];
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(new URL(path, API_URL), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+  return res.json();
+}
+
+export function createAoi(name: string, geometry: GeoPolygon) {
+  return postJson<Aoi>("/aois", { name, geometry });
+}
+
+export function fetchAois() {
+  return getJson<Aoi[]>("/aois", {});
+}
+
+export function submitAnalysis(aoiId: string, gas: string, start: string, end: string) {
+  return postJson<{ job: AnalysisJob; runner: string }>(`/aois/${aoiId}/analyses`, {
+    gas,
+    start,
+    end,
+  });
+}
+
+export function fetchAnalysis(jobId: string) {
+  return getJson<AnalysisJob>(`/analyses/${jobId}`, {});
+}
+
+export function analysisExportUrl(jobId: string, format: "csv" | "geojson"): string {
+  return new URL(`/analyses/${jobId}/export.${format}`, API_URL).toString();
+}
+
 /** Rótulos PT-BR para os setores do Climate TRACE usados na UI. */
 export const SECTOR_LABELS: Record<string, string> = {
   steel: "Siderurgia e fundição",
