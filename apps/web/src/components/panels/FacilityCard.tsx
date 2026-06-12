@@ -1,7 +1,14 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { fetchFacilityPlumes, formatTons, generateReport, sectorLabel } from "@/lib/api";
+import {
+  createShareLink,
+  fetchFacilityPlumes,
+  formatTons,
+  generateReport,
+  sectorLabel,
+} from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useGlobeStore } from "@/state/globeStore";
 
 const GAS_DISPLAY: Record<string, string> = {
@@ -19,6 +26,7 @@ function formatDate(iso: string): string {
 }
 
 export default function FacilityCard() {
+  const t = useT();
   const facility = useGlobeStore((s) => s.selectedFacility);
   const selectFacility = useGlobeStore((s) => s.selectFacility);
 
@@ -32,6 +40,14 @@ export default function FacilityCard() {
   const dossier = useMutation({
     mutationFn: () => generateReport(facility!.id),
     onSuccess: (created) => window.open(created.url, "_blank", "noopener"),
+  });
+
+  const share = useMutation({
+    mutationFn: () => createShareLink(facility!.id),
+    onSuccess: async (created) => {
+      const url = `${window.location.origin}/share/${created.token}`;
+      await navigator.clipboard.writeText(url);
+    },
   });
 
   if (!facility) return null;
@@ -73,7 +89,7 @@ export default function FacilityCard() {
       </table>
 
       <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
-        Plumas detectadas
+        {t("facility.plumes")}
       </p>
       {plumes.length === 0 ? (
         <p className="mb-2 text-[11px] text-text-secondary">
@@ -130,10 +146,19 @@ export default function FacilityCard() {
         disabled={dossier.isPending}
         className="mt-2 w-full rounded border border-accent-teal px-2 py-1.5 text-xs font-medium text-accent-teal transition-colors hover:bg-accent-teal/10 disabled:opacity-50"
       >
-        {dossier.isPending ? "Gerando dossiê…" : "Gerar Dossiê (PDF)"}
+        {dossier.isPending ? t("facility.generating") : t("facility.dossier")}
       </button>
-      {dossier.isError && (
-        <p className="mt-1 text-[11px] text-alert-red">Falha ao gerar o dossiê.</p>
+      <button
+        onClick={() => share.mutate()}
+        disabled={share.isPending}
+        className="mt-1.5 w-full rounded border border-white/10 px-2 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent-blue hover:text-accent-blue disabled:opacity-50"
+      >
+        {share.isSuccess ? "Link copiado (30 dias, somente leitura)" : "Copiar link para o cliente"}
+      </button>
+      {(dossier.isError || share.isError) && (
+        <p className="mt-1 text-[11px] text-alert-red">
+          Falha na operação — é preciso estar autenticado como analista ou admin.
+        </p>
       )}
     </div>
   );

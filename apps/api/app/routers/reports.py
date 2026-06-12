@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
+from app.core.security import RequireAnalyst
 from app.reports.builder import Branding, build_dossier_html, render_pdf
 from app.stores.facilities import FacilityStore
 from app.stores.plumes import PlumeStore
@@ -41,7 +42,12 @@ class ReportCreated(BaseModel):
     url: str
 
 
-@router.post("/facilities/{facility_id}/report", response_model=ReportCreated, status_code=201)
+@router.post(
+    "/facilities/{facility_id}/report",
+    response_model=ReportCreated,
+    status_code=201,
+    dependencies=[RequireAnalyst],
+)
 async def generate_report(
     facility_id: str,
     body: ReportRequest,

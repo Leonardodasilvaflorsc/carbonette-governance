@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGlobeStore } from "@/state/globeStore";
+import { useT } from "@/lib/i18n";
 import { zoomForPlaceType } from "@/lib/map";
 import type { GeocodeResult } from "@/app/api/geocode/route";
 
@@ -12,6 +13,7 @@ interface GeocodeResponse {
 }
 
 export default function SearchBox() {
+  const t = useT();
   const flyTo = useGlobeStore((s) => s.flyTo);
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
@@ -50,7 +52,7 @@ export default function SearchBox() {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Buscar cidade, região, instalação…"
+        placeholder={t("search.placeholder")}
         aria-label="Buscar localidade"
         className="glass-panel w-full rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent-teal focus:outline-none"
       />

@@ -15,11 +15,13 @@ from app.providers.emissions_data import EmissionsDataProvider, SyntheticEmissio
 from app.providers.mock import fixture_facilities
 from app.providers.plumes import fixture_plumes
 from app.providers.wind import FallbackWindProvider, MockWindProvider, OpenMeteoEra5WindProvider
-from app.routers import aois, facilities, plumes, reports
+from app.routers import aois, auth, facilities, plumes, reports, share, watchlist
+from app.services.alerts import LogEmailSender, SmtpEmailSender, WatchChecker
 from app.services.analysis import AnalysisService
 from app.services.runner import CeleryRunner, LocalRunner
 from app.stores.analysis import InMemoryAnalysisStore, PostgisAnalysisStore
 from app.stores.facilities import FacilityStore, InMemoryFacilityStore, PostgisFacilityStore
+from app.stores.platform import InMemoryPlatformStore, PostgisPlatformStore
 from app.stores.plumes import InMemoryPlumeStore, PostgisPlumeStore
 from app.stores.reports import InMemoryReportStore, PostgisReportStore
 
@@ -111,6 +113,26 @@ async def lifespan(app: FastAPI):
             OpenMeteoEra5WindProvider(), MockWindProvider()
         )
 
+    # Plataforma: usuários, watchlist, alertas (E6/E7)
+    platform_store = (
+        PostgisPlatformStore(facility_store.pool)
+        if isinstance(facility_store, PostgisFacilityStore)
+        else InMemoryPlatformStore()
+    )
+    app.state.platform_store = platform_store
+    app.state.user_store = platform_store
+    email_sender = (
+        SmtpEmailSender(
+            settings.smtp_host, settings.smtp_port, settings.smtp_user,
+            settings.smtp_password, settings.smtp_from,
+        )
+        if settings.smtp_host
+        else LogEmailSender()
+    )
+    app.state.watch_checker = WatchChecker(
+        platform_store, app.state.plume_store, service, email_sender
+    )
+
     use_celery = settings.analysis_runner == "celery" or (
         settings.analysis_runner == "auto"
         and isinstance(analysis_store, PostgisAnalysisStore)
@@ -135,6 +157,9 @@ app.include_router(facilities.router)
 app.include_router(aois.router)
 app.include_router(plumes.router)
 app.include_router(reports.router)
+app.include_router(auth.router)
+app.include_router(share.router)
+app.include_router(watchlist.router)
 
 app.add_middleware(
     CORSMiddleware,

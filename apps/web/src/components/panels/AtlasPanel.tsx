@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchRanking, fetchSectors, formatTons, sectorLabel } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useGlobeStore } from "@/state/globeStore";
 
 /**
@@ -9,6 +10,7 @@ import { useGlobeStore } from "@/state/globeStore";
  * Top-20 (t CO₂e/ano) das instalações na viewport atual.
  */
 export default function AtlasPanel() {
+  const t = useT();
   const showFacilities = useGlobeStore((s) => s.showFacilities);
   const setShowFacilities = useGlobeStore((s) => s.setShowFacilities);
   const sector = useGlobeStore((s) => s.sector);
@@ -36,7 +38,7 @@ export default function AtlasPanel() {
     <div className="glass-panel w-80 rounded-md p-3 text-sm">
       <div className="mb-2 flex items-center justify-between">
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
-          Atlas de emissores
+          {t("atlas.title")}
         </p>
         <input
           type="checkbox"
@@ -53,7 +55,7 @@ export default function AtlasPanel() {
         aria-label="Filtrar por setor"
         className="mb-3 w-full rounded border border-white/10 bg-[#101620] px-2 py-1 text-xs text-text-primary"
       >
-        <option value="">Todos os setores</option>
+        <option value="">{t("atlas.allSectors")}</option>
         {(sectorsData?.sectors ?? []).map((s) => (
           <option key={s} value={s}>
             {sectorLabel(s)}
@@ -62,7 +64,7 @@ export default function AtlasPanel() {
       </select>
 
       <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
-        Top emissores na viewport (t CO₂e/ano)
+        {t("atlas.ranking")}
       </p>
       <ol className="max-h-72 overflow-y-auto">
         {(rankingData?.facilities ?? []).map((f, i) => (
@@ -86,7 +88,7 @@ export default function AtlasPanel() {
         ))}
         {rankingData && rankingData.facilities.length === 0 && (
           <li className="px-1.5 py-1 text-xs text-text-secondary">
-            Nenhuma instalação na viewport com os filtros atuais
+            {t("atlas.empty")}
           </li>
         )}
       </ol>

@@ -22,12 +22,27 @@ export interface FacilityListResponse {
   facilities: Facility[];
 }
 
+// --- token de autenticação (FASE 6) ---
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (typeof window !== "undefined") {
+    if (token) window.localStorage.setItem("orbital_token", token);
+    else window.localStorage.removeItem("orbital_token");
+  }
+}
+
+function authHeaders(): Record<string, string> {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
 async function getJson<T>(path: string, params: Record<string, string | number | undefined>): Promise<T> {
   const url = new URL(path, API_URL);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
   }
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
 }
@@ -82,11 +97,45 @@ export interface AnalysisJob {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(new URL(path, API_URL), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
+}
+
+// --- auth e compartilhamento (FASE 6) ---
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: "admin" | "analyst" | "viewer";
+}
+
+export function loginRequest(email: string, password: string) {
+  return postJson<{ access_token: string; user: AuthUser }>("/auth/login", { email, password });
+}
+
+export function registerRequest(email: string, password: string) {
+  return postJson<AuthUser>("/auth/register", { email, password });
+}
+
+export interface SharedFacilityView {
+  target_type: string;
+  facility: Facility;
+  plumes: Plume[];
+}
+
+export function fetchSharedView(token: string) {
+  return getJson<SharedFacilityView>(`/share/${token}`, {});
+}
+
+export function createShareLink(facilityId: string, expiresDays = 30) {
+  return postJson<{ token: string; path: string }>("/share", {
+    target_type: "facility",
+    target_id: facilityId,
+    expires_days: expiresDays,
+  });
 }
 
 export function createAoi(name: string, geometry: GeoPolygon) {

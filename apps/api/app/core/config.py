@@ -19,6 +19,14 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # --- Auth e alertas (FASE 6) ---
+    jwt_secret: str = "troque-em-producao"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "alerts@example.com"
+
     # --- Análise Quantitativa (FASE 3) ---
     # auto: GEE se credencial configurada e lib disponível, senão sintético
     emissions_provider: str = "auto"  # auto | gee | synthetic

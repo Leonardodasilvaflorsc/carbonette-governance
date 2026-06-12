@@ -71,6 +71,22 @@ python -m app.jobs.ingest_plumes --bbox=-54,-29.5,-48,-25.8          # API real
 python -m app.jobs.ingest_plumes --bbox=-54,-29.5,-48,-25.8 --mock   # fixtures
 ```
 
+## Autenticação, alertas e compartilhamento
+
+- **Papéis**: o primeiro usuário registrado vira `admin` (bootstrap); admins
+  criam `analyst` (cria AOIs/análises/dossiês) e `viewer` (somente leitura).
+- **Links públicos**: "Copiar link para o cliente" na ficha da instalação gera
+  URL assinada (`/share/{token}`, expira em 30 dias) — o cliente externo
+  navega somente a visualização do alvo compartilhado, sem login.
+- **Watchlist**: `POST /watchlist` monitora instalação (nova pluma) ou AOI
+  (anomalia z≥2). Verificação diária via Celery beat
+  (`celery -A app.workers.celery_app beat`) ou manual via
+  `POST /watchlist/check`; alertas por e-mail (SMTP_*) e em `GET /alerts`.
+- **Antes/depois**: `GET /aois/{id}/before-after?gas=CH4&pivot=...` compara a
+  concentração média pré/pós marco para evidenciar redução de projeto.
+- **i18n**: PT-BR (padrão) e EN no seletor do cabeçalho; textos científicos
+  longos permanecem PT-BR até a passada completa de tradução.
+
 ## Testes e qualidade
 
 ```sh

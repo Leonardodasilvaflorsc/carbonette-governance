@@ -1,7 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useEffect } from "react";
 import Providers from "@/components/Providers";
+import { useLocaleStore, useT } from "@/lib/i18n";
+import { useAuthStore } from "@/state/authStore";
 import AnalysisPanel from "@/components/panels/AnalysisPanel";
 import AtlasPanel from "@/components/panels/AtlasPanel";
 import ControlPanel from "@/components/panels/ControlPanel";
@@ -17,6 +21,15 @@ const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "ORBITAL-GHG";
 
 function Workspace() {
   const compare = useGlobeStore((s) => s.compare);
+  const t = useT();
+  const { locale, setLocale } = useLocaleStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const restore = useAuthStore((s) => s.restore);
+
+  useEffect(() => {
+    restore();
+  }, [restore]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
@@ -27,12 +40,33 @@ function Workspace() {
           <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-text-primary">
             {appName}
           </h1>
-          <p className="text-xs text-text-secondary">
-            Inteligência orbital de emissões — visão de satélite
-          </p>
+          <p className="text-xs text-text-secondary">{t("header.subtitle")}</p>
         </div>
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-start gap-2">
           <SearchBox />
+          <button
+            onClick={() => setLocale(locale === "pt-BR" ? "en" : "pt-BR")}
+            className="glass-panel rounded-md px-2 py-2 font-mono text-xs text-text-secondary hover:text-text-primary"
+            title="Idioma / Language"
+          >
+            {locale === "pt-BR" ? "PT" : "EN"}
+          </button>
+          {user ? (
+            <button
+              onClick={logout}
+              className="glass-panel rounded-md px-3 py-2 text-xs text-text-secondary hover:text-text-primary"
+              title={user.email}
+            >
+              {t("auth.logout")} ({user.role})
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="glass-panel rounded-md px-3 py-2 text-xs text-accent-teal hover:bg-accent-teal/10"
+            >
+              {t("auth.login")}
+            </Link>
+          )}
         </div>
       </header>
 

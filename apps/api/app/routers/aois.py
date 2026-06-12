@@ -1,11 +1,15 @@
 import csv
 import io
+import statistics
+from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from app.domain.analysis import AnalysisJob, AnalysisParams, Aoi, GeoPolygon
+from app.core.security import RequireAnalyst
+from app.domain.analysis import AnalysisGas, AnalysisJob, AnalysisParams, Aoi, GeoPolygon
+from app.providers.emissions_data import provider_product_label
 from app.services.analysis import AnalysisService
 
 router = APIRouter(tags=["analysis"])
@@ -32,7 +36,7 @@ class JobSubmitted(BaseModel):
     runner: str
 
 
-@router.post("/aois", response_model=Aoi, status_code=201)
+@router.post("/aois", response_model=Aoi, status_code=201, dependencies=[RequireAnalyst])
 async def create_aoi(body: CreateAoiRequest, service: ServiceDep):
     ring = body.geometry.coordinates[0] if body.geometry.coordinates else []
     if len(ring) < 4:
@@ -45,7 +49,12 @@ async def list_aois(service: ServiceDep):
     return await service.store.list_aois()
 
 
-@router.post("/aois/{aoi_id}/analyses", response_model=JobSubmitted, status_code=202)
+@router.post(
+    "/aois/{aoi_id}/analyses",
+    response_model=JobSubmitted,
+    status_code=202,
+    dependencies=[RequireAnalyst],
+)
 async def submit_analysis(
     aoi_id: str, params: AnalysisParams, service: ServiceDep, request: Request
 ):
@@ -57,6 +66,61 @@ async def submit_analysis(
     runner = get_runner(request)
     runner.submit(job.id)
     return JobSubmitted(job=job, runner=runner.name)
+
+
+class BeforeAfterResponse(BaseModel):
+    """Comparação antes/depois de um marco (ex.: projeto de redução)."""
+
+    gas: str
+    pivot: date
+    months_window: int
+    before_mean: float | None
+    after_mean: float | None
+    change_pct: float | None
+    n_before: int
+    n_after: int
+    unit: str
+    product: str
+
+
+@router.get("/aois/{aoi_id}/before-after", response_model=BeforeAfterResponse)
+async def before_after(
+    aoi_id: str,
+    service: ServiceDep,
+    pivot: Annotated[date, Query(description="data do marco (ex.: comissionamento)")],
+    gas: AnalysisGas = "CH4",
+    months: Annotated[int, Query(ge=2, le=24)] = 6,
+):
+    """Prova de redução pós-projeto: média de concentração antes vs. depois."""
+    aoi = await service.store.get_aoi(aoi_id)
+    if aoi is None:
+        raise HTTPException(status_code=404, detail="AOI não encontrada")
+
+    start = pivot - timedelta(days=31 * months)
+    end = pivot + timedelta(days=31 * months)
+    series = await service.provider.extract_timeseries(aoi.geometry, gas, start, end)
+
+    before = [p.value for p in series if p.value is not None and p.date < pivot]
+    after = [p.value for p in series if p.value is not None and p.date >= pivot]
+    before_mean = statistics.fmean(before) if before else None
+    after_mean = statistics.fmean(after) if after else None
+    change = (
+        round(100 * (after_mean - before_mean) / before_mean, 1)
+        if before_mean and after_mean is not None
+        else None
+    )
+    return BeforeAfterResponse(
+        gas=gas,
+        pivot=pivot,
+        months_window=months,
+        before_mean=round(before_mean, 2) if before_mean is not None else None,
+        after_mean=round(after_mean, 2) if after_mean is not None else None,
+        change_pct=change,
+        n_before=len(before),
+        n_after=len(after),
+        unit=series[0].unit if series else "",
+        product=provider_product_label(service.provider, gas),
+    )
 
 
 @router.get("/analyses/{job_id}", response_model=AnalysisJob)

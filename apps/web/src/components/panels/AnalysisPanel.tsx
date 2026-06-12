@@ -10,6 +10,7 @@ import {
   submitAnalysis,
   type GeoPolygon,
 } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useGlobeStore } from "@/state/globeStore";
 import TimeseriesChart from "./TimeseriesChart";
 
@@ -24,6 +25,7 @@ function lastTwelveMonths(): { start: string; end: string } {
 
 /** Análise quantitativa (E3): AOIs, séries temporais e exportações. */
 export default function AnalysisPanel() {
+  const t = useT();
   const queryClient = useQueryClient();
   const drawingAoi = useGlobeStore((s) => s.drawingAoi);
   const draftVertices = useGlobeStore((s) => s.draftVertices);
@@ -75,7 +77,7 @@ export default function AnalysisPanel() {
   return (
     <div className="glass-panel w-72 rounded-md p-3 text-sm">
       <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
-        Análise quantitativa (AOI)
+        {t("analysis.title")}
       </p>
 
       {!drawingAoi && !draftPending && (
@@ -83,7 +85,7 @@ export default function AnalysisPanel() {
           onClick={startDrawingAoi}
           className="mb-2 w-full rounded border border-white/10 px-2 py-1 text-xs text-text-secondary hover:border-accent-teal hover:text-accent-teal"
         >
-          Desenhar AOI no mapa
+          {t("analysis.draw")}
         </button>
       )}
       {drawingAoi && (
@@ -97,7 +99,7 @@ export default function AnalysisPanel() {
           <input
             value={aoiName}
             onChange={(e) => setAoiName(e.target.value)}
-            placeholder="Nome da AOI"
+            placeholder={t("analysis.aoiName")}
             className="min-w-0 flex-1 rounded border border-white/10 bg-transparent px-2 py-1 text-xs text-text-primary"
           />
           <button
@@ -105,7 +107,7 @@ export default function AnalysisPanel() {
             disabled={saveAoi.isPending}
             className="rounded border border-accent-teal px-2 py-1 text-xs text-accent-teal hover:bg-accent-teal/10"
           >
-            Salvar
+            {t("analysis.save")}
           </button>
           <button
             onClick={clearDraftAoi}
@@ -133,7 +135,7 @@ export default function AnalysisPanel() {
           aria-label="AOI selecionada"
           className="mb-2 w-full rounded border border-white/10 bg-[#101620] px-2 py-1 text-xs text-text-primary"
         >
-          <option value="">Selecionar AOI…</option>
+          <option value="">{t("analysis.select")}</option>
           {(aois ?? []).map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -161,7 +163,7 @@ export default function AnalysisPanel() {
             disabled={runAnalysis.isPending}
             className="flex-1 rounded border border-accent-blue px-2 py-1 text-xs text-accent-blue hover:bg-accent-blue/10"
           >
-            Analisar últimos 12 meses
+            {t("analysis.run")}
           </button>
         </div>
       )}
