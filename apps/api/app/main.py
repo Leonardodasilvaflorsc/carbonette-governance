@@ -15,12 +15,13 @@ from app.providers.emissions_data import EmissionsDataProvider, SyntheticEmissio
 from app.providers.mock import fixture_facilities
 from app.providers.plumes import fixture_plumes
 from app.providers.wind import FallbackWindProvider, MockWindProvider, OpenMeteoEra5WindProvider
-from app.routers import aois, facilities, plumes
+from app.routers import aois, facilities, plumes, reports
 from app.services.analysis import AnalysisService
 from app.services.runner import CeleryRunner, LocalRunner
 from app.stores.analysis import InMemoryAnalysisStore, PostgisAnalysisStore
 from app.stores.facilities import FacilityStore, InMemoryFacilityStore, PostgisFacilityStore
 from app.stores.plumes import InMemoryPlumeStore, PostgisPlumeStore
+from app.stores.reports import InMemoryReportStore, PostgisReportStore
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -95,6 +96,12 @@ async def lifespan(app: FastAPI):
             p.facility_id = associate_plume(p, mock_facilities)
         app.state.plume_store = InMemoryPlumeStore(seeded)
 
+    app.state.report_store = (
+        PostgisReportStore(facility_store.pool)
+        if isinstance(facility_store, PostgisFacilityStore)
+        else InMemoryReportStore()
+    )
+
     if settings.wind_provider == "mock":
         app.state.wind_provider = MockWindProvider()
     elif settings.wind_provider == "era5":
@@ -127,6 +134,7 @@ app = FastAPI(
 app.include_router(facilities.router)
 app.include_router(aois.router)
 app.include_router(plumes.router)
+app.include_router(reports.router)
 
 app.add_middleware(
     CORSMiddleware,

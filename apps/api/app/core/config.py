@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "ORBITAL-GHG"
+    # --- White-label / dossiê (FASE 5) ---
+    brand_primary_color: str = "#1FB6A6"
+    carbon_price_eur_t: float = 70.0
     database_url: str = "postgresql://orbital:orbital-dev-password@localhost:5432/orbital"
     redis_url: str = "redis://localhost:6379/0"
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchFacilityPlumes, formatTons, sectorLabel } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { fetchFacilityPlumes, formatTons, generateReport, sectorLabel } from "@/lib/api";
 import { useGlobeStore } from "@/state/globeStore";
 
 const GAS_DISPLAY: Record<string, string> = {
@@ -27,6 +27,11 @@ export default function FacilityCard() {
     queryFn: () => fetchFacilityPlumes(facility!.id),
     enabled: facility !== null,
     staleTime: 120_000,
+  });
+
+  const dossier = useMutation({
+    mutationFn: () => generateReport(facility!.id),
+    onSuccess: (created) => window.open(created.url, "_blank", "noopener"),
   });
 
   if (!facility) return null;
@@ -118,6 +123,17 @@ export default function FacilityCard() {
         <p className="mt-1.5 text-[11px] text-alert-amber">
           Valor de demonstração — não representa medição real desta instalação.
         </p>
+      )}
+
+      <button
+        onClick={() => dossier.mutate()}
+        disabled={dossier.isPending}
+        className="mt-2 w-full rounded border border-accent-teal px-2 py-1.5 text-xs font-medium text-accent-teal transition-colors hover:bg-accent-teal/10 disabled:opacity-50"
+      >
+        {dossier.isPending ? "Gerando dossiê…" : "Gerar Dossiê (PDF)"}
+      </button>
+      {dossier.isError && (
+        <p className="mt-1 text-[11px] text-alert-red">Falha ao gerar o dossiê.</p>
       )}
     </div>
   );

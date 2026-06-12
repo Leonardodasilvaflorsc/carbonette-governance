@@ -146,6 +146,19 @@ export function fetchFacilityPlumes(facilityId: string) {
   return getJson<PlumeListResponse>(`/facilities/${facilityId}/plumes`, {});
 }
 
+// --- Dossiê do Emissor (FASE 5) ---
+
+export interface ReportCreated {
+  report_id: string;
+  trace_hash: string;
+  url: string;
+}
+
+export async function generateReport(facilityId: string): Promise<ReportCreated> {
+  const created = await postJson<ReportCreated>(`/facilities/${facilityId}/report`, {});
+  return { ...created, url: new URL(created.url, API_URL).toString() };
+}
+
 /** Rótulos PT-BR para os setores do Climate TRACE usados na UI. */
 export const SECTOR_LABELS: Record<string, string> = {
   steel: "Siderurgia e fundição",
