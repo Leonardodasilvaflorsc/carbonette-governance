@@ -13,6 +13,7 @@
   "dependencies": {
     "@orbital/shared": "workspace:*",
     "@tanstack/react-query": "^5.59.0",
+    "fast-xml-parser": "^5.8.0",
     "maplibre-gl": "^5.0.0",
     "next": "^14.2.15",
     "react": "^18.3.1",

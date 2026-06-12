@@ -84,3 +84,72 @@ export function gibsDefaultDate(now: Date = new Date()): string {
   const d = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   return d.toISOString().slice(0, 10);
 }
+
+/**
+ * Normaliza uma data ISO para o que a camada espera:
+ * camadas mensais usam sempre o dia 01 do mês.
+ */
+export function gibsLayerDate(layer: GibsLayerDef, isoDate: string): string {
+  return layer.cadence === "monthly" ? `${isoDate.slice(0, 7)}-01` : isoDate;
+}
+
+/**
+ * Data padrão por camada: diária → ontem (UTC); mensal → dia 01 de dois
+ * meses atrás (produtos L3 mensais publicam com 1–2 meses de latência).
+ */
+export function gibsDefaultDateFor(layer: GibsLayerDef, now: Date = new Date()): string {
+  if (layer.cadence === "daily") return gibsDefaultDate(now);
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Avança/retrocede uma data ISO em `delta` passos da cadência da camada. */
+export function stepIsoDate(isoDate: string, cadence: GibsLayerDef["cadence"], delta: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const date =
+    cadence === "daily"
+      ? new Date(Date.UTC(y, m - 1, d + delta))
+      : new Date(Date.UTC(y, m - 1 + delta, 1));
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Datas da timeline: `count` passos na cadência da camada, terminando em
+ * `end` (ordem cronológica crescente).
+ */
+export function timelineDates(layer: GibsLayerDef, end: string, count: number): string[] {
+  const endNorm = gibsLayerDate(layer, end);
+  const dates: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    dates.push(stepIsoDate(endNorm, layer.cadence, -i));
+  }
+  return dates;
+}
+
+/** Parada de cor de uma legenda (valor físico → cor). */
+export interface LegendStop {
+  color: string;
+  value: number;
+}
+
+/** Legenda com escala física real, derivada do colormap oficial do GIBS. */
+export interface LayerLegend {
+  units: string;
+  min: number;
+  max: number;
+  stops: LegendStop[];
+}
+
+/**
+ * Metadados de camada após descoberta via WMTSCapabilities.
+ * `source: "fallback"` indica que a descoberta falhou e os defaults
+ * estáticos estão em uso (modo offline / degradação graciosa).
+ */
+export interface DiscoveredLayer extends GibsLayerDef {
+  key: string;
+  available: boolean;
+  startDate?: string;
+  endDate?: string;
+  legend?: LayerLegend;
+  source: "capabilities" | "fallback";
+}
