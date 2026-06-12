@@ -113,6 +113,39 @@ export function analysisExportUrl(jobId: string, format: "csv" | "geojson"): str
   return new URL(`/analyses/${jobId}/export.${format}`, API_URL).toString();
 }
 
+// --- Plumas e fluxo (FASE 4) ---
+
+export interface Plume {
+  id: string;
+  source: string;
+  gas: string;
+  lon: number;
+  lat: number;
+  geometry: GeoPolygon | null;
+  /** Fluxo de EMISSÃO — sempre exibir com ± e método. */
+  flux_kg_h: number | null;
+  flux_uncertainty_kg_h: number | null;
+  method: string;
+  observed_at: string;
+  instrument: string | null;
+  facility_id: string | null;
+  quicklook_url: string | null;
+}
+
+export interface PlumeListResponse {
+  source: string;
+  count: number;
+  plumes: Plume[];
+}
+
+export function fetchPlumes(opts: { bbox?: string; gas?: string }) {
+  return getJson<PlumeListResponse>("/plumes", opts);
+}
+
+export function fetchFacilityPlumes(facilityId: string) {
+  return getJson<PlumeListResponse>(`/facilities/${facilityId}/plumes`, {});
+}
+
 /** Rótulos PT-BR para os setores do Climate TRACE usados na UI. */
 export const SECTOR_LABELS: Record<string, string> = {
   steel: "Siderurgia e fundição",

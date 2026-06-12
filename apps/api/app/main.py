@@ -8,15 +8,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.analysis.association import associate_plume
 from app.core.config import get_settings
 from app.db import create_pool, run_migrations
 from app.providers.emissions_data import EmissionsDataProvider, SyntheticEmissionsProvider
 from app.providers.mock import fixture_facilities
-from app.routers import aois, facilities
+from app.providers.plumes import fixture_plumes
+from app.providers.wind import FallbackWindProvider, MockWindProvider, OpenMeteoEra5WindProvider
+from app.routers import aois, facilities, plumes
 from app.services.analysis import AnalysisService
 from app.services.runner import CeleryRunner, LocalRunner
 from app.stores.analysis import InMemoryAnalysisStore, PostgisAnalysisStore
 from app.stores.facilities import FacilityStore, InMemoryFacilityStore, PostgisFacilityStore
+from app.stores.plumes import InMemoryPlumeStore, PostgisPlumeStore
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -81,6 +85,25 @@ async def lifespan(app: FastAPI):
     service = AnalysisService(analysis_store, build_emissions_provider())
     app.state.analysis_service = service
 
+    # Plumas: PostGIS quando há DB; senão fixtures associadas às instalações mock
+    if isinstance(facility_store, PostgisFacilityStore):
+        app.state.plume_store = PostgisPlumeStore(facility_store.pool)
+    else:
+        seeded = fixture_plumes()
+        mock_facilities = fixture_facilities(settings.facility_ref_year)
+        for p in seeded:
+            p.facility_id = associate_plume(p, mock_facilities)
+        app.state.plume_store = InMemoryPlumeStore(seeded)
+
+    if settings.wind_provider == "mock":
+        app.state.wind_provider = MockWindProvider()
+    elif settings.wind_provider == "era5":
+        app.state.wind_provider = OpenMeteoEra5WindProvider()
+    else:
+        app.state.wind_provider = FallbackWindProvider(
+            OpenMeteoEra5WindProvider(), MockWindProvider()
+        )
+
     use_celery = settings.analysis_runner == "celery" or (
         settings.analysis_runner == "auto"
         and isinstance(analysis_store, PostgisAnalysisStore)
@@ -103,6 +126,7 @@ app = FastAPI(
 
 app.include_router(facilities.router)
 app.include_router(aois.router)
+app.include_router(plumes.router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -64,6 +64,13 @@ python -m app.jobs.ingest_facilities --mock   # fixtures de demonstração
 Sem banco alcançável a API serve fixtures em memória e declara
 `source: "mock"` nas respostas — a UI exibe o aviso correspondente.
 
+Plumas (Carbon Mapper) com associação automática a instalações:
+
+```sh
+python -m app.jobs.ingest_plumes --bbox=-54,-29.5,-48,-25.8          # API real
+python -m app.jobs.ingest_plumes --bbox=-54,-29.5,-48,-25.8 --mock   # fixtures
+```
+
 ## Testes e qualidade
 
 ```sh

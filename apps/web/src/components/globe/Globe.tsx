@@ -8,6 +8,7 @@ import { CINEMATIC_FLY } from "@/lib/map";
 import { useGibsMap } from "./useGibsMap";
 import { useFacilitiesOverlay } from "./useFacilitiesOverlay";
 import { useAoiDraw } from "./useAoiDraw";
+import { usePlumesLayer } from "./usePlumesLayer";
 
 export default function Globe() {
   const gasKey = useGlobeStore((s) => s.gasKey);
@@ -20,6 +21,7 @@ export default function Globe() {
 
   useFacilitiesOverlay(mapRef, ready);
   useAoiDraw(mapRef, ready);
+  usePlumesLayer(mapRef, ready);
 
   useEffect(() => {
     const map = mapRef.current;

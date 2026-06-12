@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # auto: Celery se o broker Redis responder, senão runner local (asyncio)
     analysis_runner: str = "auto"  # auto | celery | local
 
+    # --- Plumas e fluxo (FASE 4) ---
+    carbon_mapper_api_key: str = ""
+    wind_provider: str = "auto"  # auto | era5 | mock
+
     # --- Atlas de Emissores (FASE 2) ---
     climate_trace_api_url: str = "https://api.climatetrace.org/v6"
     # auto: usa PostGIS se alcançável, senão fixtures em memória (dev offline)
