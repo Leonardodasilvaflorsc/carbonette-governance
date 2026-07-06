@@ -8,6 +8,18 @@ instalação (Climate TRACE); análise quantitativa MRV-grade (TROPOMI); detecç
 plumas (Carbon Mapper); e geração de dossiês técnicos de evidência para projetos
 de descarbonização.
 
+## Rodar na web, sem instalar nada (GitHub Codespaces)
+
+No GitHub: **Code → Codespaces → Create codespace** nesta branch. Quando o
+ambiente abrir, no terminal:
+
+```sh
+bash scripts/codespaces-start.sh
+```
+
+O script builda tudo apontando para as URLs públicas do Codespace e imprime
+o link do globo (porta 3000). Plano gratuito do GitHub inclui ~60 h/mês.
+
 ## Setup em 5 comandos
 
 ```sh
