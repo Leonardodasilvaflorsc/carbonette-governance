@@ -10,6 +10,13 @@ RUN pnpm install --frozen-lockfile
 
 COPY packages/shared packages/shared
 COPY apps/web apps/web
+
+# NEXT_PUBLIC_* é embutido no bundle em build-time — passar como build args
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_APP_NAME=ORBITAL-GHG
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+
 RUN pnpm --filter @orbital/web build
 
 FROM node:22-alpine AS runner
