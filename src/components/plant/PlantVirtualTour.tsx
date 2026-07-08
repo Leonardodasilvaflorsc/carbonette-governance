@@ -295,13 +295,16 @@ export const PlantVirtualTour = ({ results }: { results: PlantResults }) => {
     [results.urea],
   );
   const [sceneId, setSceneId] = useState("aerial");
-  const [failed, setFailed] = useState<Record<string, boolean>>({});
+  // Tenta .jpg, .png e .webp antes de considerar a imagem ausente
+  const EXTENSIONS = ["jpg", "png", "webp"];
+  const [extIdx, setExtIdx] = useState<Record<string, number>>({});
   const [showMap, setShowMap] = useState(false);
 
   const idx = Math.max(0, scenes.findIndex((s) => s.id === sceneId));
   const scene = scenes[idx];
-  const imgSrc = `/plant-tour/${scene.id}.jpg`;
-  const imgMissing = failed[scene.id];
+  const sceneExt = extIdx[scene.id] ?? 0;
+  const imgMissing = sceneExt >= EXTENSIONS.length;
+  const imgSrc = `/plant-tour/${scene.id}.${EXTENSIONS[Math.min(sceneExt, EXTENSIONS.length - 1)]}`;
 
   const go = (id: string) => {
     if (scenes.some((s) => s.id === id)) setSceneId(id);
@@ -346,7 +349,7 @@ export const PlantVirtualTour = ({ results }: { results: PlantResults }) => {
               src={imgSrc}
               alt={scene.title}
               className="h-full w-full object-cover"
-              onError={() => setFailed((f) => ({ ...f, [scene.id]: true }))}
+              onError={() => setExtIdx((f) => ({ ...f, [scene.id]: (f[scene.id] ?? 0) + 1 }))}
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-800 to-slate-950 text-slate-300">
@@ -355,7 +358,7 @@ export const PlantVirtualTour = ({ results }: { results: PlantResults }) => {
               <p className="max-w-md px-6 text-center text-xs opacity-70">
                 Imagem ainda não gerada. Crie-a com o prompt correspondente em{" "}
                 <code>docs/prompts-imagens-planta.md</code> e salve como{" "}
-                <code>public/plant-tour/{scene.id}.jpg</code> (16:9).
+                <code>public/plant-tour/{scene.id}.jpg</code> (ou .png/.webp, 16:9).
               </p>
             </div>
           )}
