@@ -14,6 +14,8 @@ import {
   PlantInputs,
   H2Source,
   H2_SOURCE_INFO,
+  FinalProduct,
+  FINAL_PRODUCT_INFO,
 } from "@/lib/plant/simulation";
 
 interface Props {
@@ -72,6 +74,28 @@ export const PlantControlPanel = ({ inputs, onChange }: Props) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Produto final</Label>
+          <Select
+            value={inputs.finalProduct}
+            onValueChange={(v) => set("finalProduct", v as FinalProduct)}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(FINAL_PRODUCT_INFO) as FinalProduct[]).map((k) => (
+                <SelectItem key={k} value={k}>
+                  {FINAL_PRODUCT_INFO[k].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] leading-tight text-muted-foreground">
+            {FINAL_PRODUCT_INFO[inputs.finalProduct].note}
+          </p>
+        </div>
+
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">
             Tecnologia de geração de H₂
@@ -169,6 +193,15 @@ export const PlantControlPanel = ({ inputs, onChange }: Props) => {
           max={150}
           step={1}
           onChange={(v) => set("electricityUSDPerMWh", v)}
+        />
+        <SliderRow
+          label="Preço de venda do produto"
+          unit="USD/t"
+          value={inputs.productPriceUSDPerT}
+          min={150}
+          max={1200}
+          step={10}
+          onChange={(v) => set("productPriceUSDPerT", v)}
         />
       </CardContent>
     </Card>

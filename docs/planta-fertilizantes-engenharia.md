@@ -126,12 +126,48 @@ Resultados típicos (300 t/d, PEM, 200 bar, 450 °C, separador a -10 °C, purga 
 - Flare para despressurização de emergência;
 - Estudos HAZOP/LOPA por nó de processo nas fases seguintes.
 
-## 9. Estimativa de investimento
+## 9. Downstream de ureia (opcional)
+
+O simulador permite selecionar **ureia granulada** como produto final:
+
+```
+2 NH3 + CO2  ⇌  NH2COONH4  →  NH2CONH2 + H2O   (processo de stripping de CO2)
+```
+
+- **Consumos por t de ureia**: 0,567 t NH₃ + 0,733 t CO₂;
+- **Energia adicional**: ~0,115 MWh elétrico/t (compressor de CO₂ a 150 bar,
+  bombas de carbamato, granulação) + ~0,92 t vapor/t (stripping);
+- **Fonte de CO₂**: na rota SMR, capturado do próprio gás de processo (planta
+  integrada clássica); na rota verde, CO₂ importado/biogênico (35 USD/t na
+  análise econômica);
+- **Equipamentos adicionais**: R-601 (reator de ureia, inox 25-22-2), K-601
+  (compressor de CO₂), GR-601 (granulador de leito fluidizado);
+- **CAPEX**: +45% sobre a planta de amônia.
+
+## 10. Análise econômica (`src/lib/plant/economics.ts`)
+
+Custo nivelado (LCOA/LCOU) = (CAPEX × FRC + OPEX fixo)/produção anual + custos
+variáveis. Premissas: WACC real 8% a.a., vida útil 25 anos, disponibilidade 92%,
+OPEX fixo 3% do CAPEX/ano, GN 4,5 USD/GJ, água 0,80 USD/m³.
+
+Resultados de referência (300 t/d NH₃, tarifa 42 USD/MWh):
+
+| Cenário | Custo nivelado | Observação |
+|---|---|---|
+| NH₃ verde (PEM) | ~650 USD/t | dominado por energia (~460 USD/t) |
+| Ureia verde (PEM) | ~450 USD/t | inclui CO₂ importado |
+| Ureia SMR | ~200 USD/t | competitiva ao preço de mercado |
+
+A aba **Economia** traz composição do custo, EBITDA, payback, VPL e curva de
+sensibilidade custo × tarifa para as 4 rotas de H₂. A aba **Relatório** gera o
+relatório técnico consolidado exportável em PDF (impressão do navegador).
+
+## 11. Estimativa de investimento
 
 CAPEX **classe 5 (AACE, ±40%)** com curva de escala: ~1.350 USD/(t·ano) para rota
-verde e ~950 USD/(t·ano) para SMR, na base 300 t/d.
+verde e ~950 USD/(t·ano) para SMR, na base 300 t/d (+45% com ureia).
 
-## 10. Roadmap de desenvolvimento do projeto
+## 12. Roadmap de desenvolvimento do projeto
 
 | Fase | Entregável | Status |
 |---|---|---|
@@ -140,12 +176,13 @@ verde e ~950 USD/(t·ano) para SMR, na base 300 t/d.
 | FEL-3 | P&IDs, folhas de dados de compra, HAZOP, CAPEX classe 3 | — |
 | EPC | Detalhamento, construção, comissionamento | — |
 
-## 11. Estrutura do código
+## 13. Estrutura do código
 
 ```
 src/lib/plant/
   thermo.ts        # equilíbrio, fugacidade, Antoine, compressão
-  simulation.ts    # balanço de massa/energia, dimensionamentos, CAPEX
+  simulation.ts    # balanço de massa/energia, ureia, dimensionamentos, CAPEX
+  economics.ts     # LCOA/LCOU, EBITDA, payback, VPL
 src/components/plant/
   PlantControlPanel.tsx     # parâmetros de processo (sliders/seleções)
   PlantFlowsheet.tsx        # PFD animado (SVG) com valores ao vivo
@@ -154,5 +191,7 @@ src/components/plant/
   PlantChartsPanel.tsx      # curvas de equilíbrio e sensibilidade
   PlantStreamsTable.tsx     # tabela de correntes
   PlantEngineeringPanel.tsx # folhas de dados, disciplinas, normas
+  PlantEconomicsPanel.tsx   # análise econômica e sensibilidade
+  PlantReport.tsx           # relatório técnico exportável (PDF)
 src/pages/PlantSimulator.tsx
 ```

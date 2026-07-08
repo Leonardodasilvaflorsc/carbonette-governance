@@ -41,7 +41,27 @@ export interface PlantInputs {
   equilibriumApproach: number;
   /** Tarifa de energia elétrica [USD/MWh] */
   electricityUSDPerMWh: number;
+  /** Produto final da planta */
+  finalProduct: FinalProduct;
+  /** Preço de venda do produto final [USD/t] */
+  productPriceUSDPerT: number;
 }
+
+export type FinalProduct = "nh3" | "urea";
+
+export const FINAL_PRODUCT_INFO: Record<
+  FinalProduct,
+  { label: string; note: string }
+> = {
+  nh3: {
+    label: "Amônia anidra (NH₃)",
+    note: "Produto intermediário — venda direta ou matéria-prima",
+  },
+  urea: {
+    label: "Ureia granulada",
+    note: "2 NH₃ + CO₂ → ureia — processo de stripping de CO₂ + granulação",
+  },
+};
 
 export const DEFAULT_INPUTS: PlantInputs = {
   capacityTpd: 300,
@@ -52,6 +72,8 @@ export const DEFAULT_INPUTS: PlantInputs = {
   purgeFraction: 0.03,
   equilibriumApproach: 0.85,
   electricityUSDPerMWh: 42,
+  finalProduct: "nh3",
+  productPriceUSDPerT: 550,
 };
 
 export const H2_SOURCE_INFO: Record<
@@ -120,6 +142,14 @@ export interface EquipmentItem {
   value: string;
 }
 
+export interface UreaResults {
+  ureaKgH: number;
+  co2KgH: number;
+  electricMW: number;
+  steamTH: number;
+  co2Source: string;
+}
+
 export interface PlantResults {
   inputs: PlantInputs;
   converged: boolean;
@@ -127,6 +157,11 @@ export interface PlantResults {
   nh3KgH: number;
   nh3TPerDay: number;
   nh3TPerYear: number;
+  // Produto final (NH3 ou ureia)
+  productKgH: number;
+  productTPerDay: number;
+  productTPerYear: number;
+  urea: UreaResults | null;
   // Consumo de matérias-primas
   h2KgH: number;
   n2KgH: number;
@@ -473,8 +508,49 @@ export function simulatePlant(inputs: PlantInputs): PlantResults {
     type: "thermal-out",
   });
 
-  const totalElectricMW = processPowerMW + bopPowerMW;
-  const specificEnergyMWhPerT = totalElectricMW / (nh3KgH / 1000);
+  // ------------------------------------------------------------------
+  // 3b. Downstream de ureia (opcional): 2 NH3 + CO2 → NH2CONH2 + H2O
+  // ------------------------------------------------------------------
+  const isUrea = inputs.finalProduct === "urea";
+  let urea: UreaResults | null = null;
+  if (isUrea) {
+    const ureaKgH = nh3KgH / 0.567; // 0,567 t NH3/t ureia
+    const co2KgH = ureaKgH * 0.733; // 0,733 t CO2/t ureia
+    // Elétrico: bombas de alta pressão do carbamato + compressor de CO2
+    // (~150 bar) + granulação ≈ 0,115 MWh/t ureia
+    const electricMW = (ureaKgH * 0.115) / 1000;
+    // Vapor: ~0,92 t/t ureia (stripping) ≈ 0,59 MWh térmico/t
+    const steamTH = (ureaKgH * 0.92) / 1000;
+    const steamMW = steamTH * 0.64;
+    energyItems.push({
+      id: "urea-elec",
+      label: "Planta de ureia (compressor de CO2, bombas HP, granulação)",
+      area: "Ureia",
+      powerMW: electricMW,
+      type: "electric",
+    });
+    energyItems.push({
+      id: "urea-steam",
+      label: "Vapor de stripping da ureia (parcialmente coberto pela WHB)",
+      area: "Ureia",
+      powerMW: steamMW,
+      type: "thermal-in",
+    });
+    urea = {
+      ureaKgH,
+      co2KgH,
+      electricMW,
+      steamTH,
+      co2Source: isElectrolysis
+        ? "CO₂ importado (biogênico/captura) — necessário para a rota verde"
+        : "CO₂ capturado do próprio gás de processo do SMR",
+    };
+  }
+  const ureaElectricMW = urea?.electricMW ?? 0;
+
+  const totalElectricMW = processPowerMW + bopPowerMW + ureaElectricMW;
+  const specificEnergyMWhPerT =
+    (processPowerMW + bopPowerMW) / (nh3KgH / 1000); // benchmark por t NH3
   const energyCostUSDPerT =
     specificEnergyMWhPerT * electricityUSDPerMWh +
     (natGasGJH / (nh3KgH / 1000)) * 4.5; // GN a ~4,5 USD/GJ
@@ -482,6 +558,11 @@ export function simulatePlant(inputs: PlantInputs): PlantResults {
   // CO2 evitado vs rota SMR convencional (1,9 t CO2/t NH3)
   const nh3TPerYear = capacityTpd * 365 * 0.92; // fator de disponibilidade
   const co2AvoidedTPerYear = isElectrolysis ? nh3TPerYear * 1.9 : 0;
+
+  // Produto final
+  const productKgH = isUrea ? urea!.ureaKgH : nh3KgH;
+  const productTPerDay = (productKgH * 24) / 1000;
+  const productTPerYear = productTPerDay * 365 * 0.92;
 
   // Água
   const waterM3H = isElectrolysis
@@ -582,11 +663,42 @@ export function simulatePlant(inputs: PlantInputs): PlantResults {
     { h2KgH, n2KgH, syngasStages: syngasComp.stages, coolingDutyMW, steamCreditMW },
   );
 
+  // Equipamentos adicionais da planta de ureia
+  if (urea) {
+    const fmtLocal = (v: number, d = 0) =>
+      v.toLocaleString("pt-BR", { maximumFractionDigits: d });
+    equipment.push(
+      {
+        tag: "R-601",
+        name: "Reator de síntese de ureia",
+        discipline: "mecânica",
+        spec: "Stripping de CO2 (Stamicarbon/Saipem), 150 bar / 185 °C, aço inox 25-22-2",
+        value: `${fmtLocal(urea.ureaKgH / 1000, 1)} t ureia/h`,
+      },
+      {
+        tag: "K-601",
+        name: "Compressor de CO2",
+        discipline: "mecânica",
+        spec: "Centrífugo, descarga 150 bar",
+        value: `${fmtLocal(urea.co2KgH / 1000, 1)} t CO2/h`,
+      },
+      {
+        tag: "GR-601",
+        name: "Granulador de ureia",
+        discipline: "mecânica",
+        spec: "Leito fluidizado, scrubber de pó, produto 2–4 mm",
+        value: `${fmtLocal((urea.ureaKgH * 24) / 1000, 0)} t/dia`,
+      },
+    );
+  }
+
   // CAPEX classe 5 (AACE ±40%) — curva de escala expoente 0,62
+  // Downstream de ureia adiciona ~45% ao investimento
   const baseUSDPerTpa = isElectrolysis ? 1350 : 950;
   const capexMUSD =
-    (baseUSDPerTpa * (capacityTpd * 365) * Math.pow(capacityTpd / 300, -0.15)) /
-    1e6;
+    ((baseUSDPerTpa * (capacityTpd * 365) * Math.pow(capacityTpd / 300, -0.15)) /
+      1e6) *
+    (isUrea ? 1.45 : 1);
 
   return {
     inputs,
@@ -594,6 +706,10 @@ export function simulatePlant(inputs: PlantInputs): PlantResults {
     nh3KgH,
     nh3TPerDay: capacityTpd,
     nh3TPerYear,
+    productKgH,
+    productTPerDay,
+    productTPerYear,
+    urea,
     h2KgH,
     n2KgH,
     waterM3H,

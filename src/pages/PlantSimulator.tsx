@@ -9,7 +9,10 @@ import {
   PlantInputs,
   simulatePlant,
   H2_SOURCE_INFO,
+  FINAL_PRODUCT_INFO,
 } from "@/lib/plant/simulation";
+import { PlantEconomicsPanel } from "@/components/plant/PlantEconomicsPanel";
+import { PlantReport } from "@/components/plant/PlantReport";
 import { PlantControlPanel } from "@/components/plant/PlantControlPanel";
 import { PlantFlowsheet } from "@/components/plant/PlantFlowsheet";
 import { Plant3DView } from "@/components/plant/Plant3DView";
@@ -61,8 +64,9 @@ const PlantSimulator = () => {
               Simulador — Planta de Fertilizante Nitrogenado (NH₃)
             </h1>
             <p className="text-sm text-muted-foreground">
-              Síntese Haber-Bosch · {H2_SOURCE_INFO[inputs.h2Source].label} · loop a{" "}
-              {inputs.loopPressureBar} bar / {inputs.reactorTempC} °C
+              {FINAL_PRODUCT_INFO[inputs.finalProduct].label} · Síntese Haber-Bosch ·{" "}
+              {H2_SOURCE_INFO[inputs.h2Source].label} · loop a {inputs.loopPressureBar} bar /{" "}
+              {inputs.reactorTempC} °C
             </p>
           </div>
           <Badge
@@ -80,8 +84,10 @@ const PlantSimulator = () => {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             icon={Factory}
-            label="Produção de NH₃"
-            value={fmt(results.nh3TPerDay, 0)}
+            label={
+              inputs.finalProduct === "urea" ? "Produção de ureia" : "Produção de NH₃"
+            }
+            value={fmt(results.productTPerDay, 0)}
             unit="t/dia"
           />
           <Kpi
@@ -115,6 +121,8 @@ const PlantSimulator = () => {
               <TabsTrigger value="charts">Curvas de Processo</TabsTrigger>
               <TabsTrigger value="streams">Correntes</TabsTrigger>
               <TabsTrigger value="engineering">Engenharia</TabsTrigger>
+              <TabsTrigger value="economics">Economia</TabsTrigger>
+              <TabsTrigger value="report">Relatório</TabsTrigger>
             </TabsList>
             <TabsContent value="flowsheet" className="mt-3">
               <PlantFlowsheet results={results} />
@@ -133,6 +141,12 @@ const PlantSimulator = () => {
             </TabsContent>
             <TabsContent value="engineering" className="mt-3">
               <PlantEngineeringPanel results={results} />
+            </TabsContent>
+            <TabsContent value="economics" className="mt-3">
+              <PlantEconomicsPanel results={results} />
+            </TabsContent>
+            <TabsContent value="report" className="mt-3">
+              <PlantReport results={results} />
             </TabsContent>
           </Tabs>
         </div>

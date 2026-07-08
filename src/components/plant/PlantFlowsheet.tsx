@@ -111,6 +111,19 @@ export const PlantFlowsheet = ({ results }: { results: PlantResults }) => {
         "API 620 Anexo R, parede dupla com contenção integral",
       ],
     },
+    ...(r.urea
+      ? {
+          urea: {
+            id: "urea",
+            title: "R-601/GR-601 — Síntese e Granulação de Ureia",
+            lines: [
+              `2 NH₃ + CO₂ → ureia: ${fmt(r.urea.ureaKgH / 1000, 1)} t/h (${fmt(r.productTPerDay)} t/dia)`,
+              `Consumo de CO₂: ${fmt(r.urea.co2KgH / 1000, 1)} t/h — ${r.urea.co2Source}`,
+              `Stripping a 150 bar + granulador de leito fluidizado`,
+            ],
+          },
+        }
+      : {}),
   };
 
   // Espessuras de linha proporcionais às vazões mássicas
@@ -259,6 +272,21 @@ export const PlantFlowsheet = ({ results }: { results: PlantResults }) => {
             {unitBox("recycle", 480, 175, 80, 50, "#a16207", "K-402", "Reciclo")}
             {unitBox("purge", 640, 310, 110, 44, "#475569", "PSA-407", "Recup. H₂")}
             {unitBox("tank", 790, 330, 130, 70, "#b91c1c", "TQ-501", "NH₃ -33 °C")}
+
+            {/* Downstream de ureia (opcional) */}
+            {r.urea && (
+              <>
+                {pipe("M 920 350 H 940 V 300 H 905", COLORS.nh3, 3)}
+                {pipe("M 850 220 V 245", "#64748b", 2, true)}
+                {unitBox("urea", 845, 245, 115, 55, "#15803d", "R-601/GR-601", "Ureia")}
+                <text x={842} y={214} className="fill-slate-500 text-[10px]">
+                  CO₂ {fmt(r.urea.co2KgH / 1000, 1)} t/h
+                </text>
+                <text x={958} y={238} textAnchor="end" className="fill-green-700 text-[10px] font-semibold">
+                  Ureia {fmt(r.urea.ureaKgH / 1000, 1)} t/h
+                </text>
+              </>
+            )}
 
             {/* Caldeira de recuperação */}
             <g className="cursor-pointer" onClick={() => setSelected(units.reactor)}>
