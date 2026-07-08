@@ -13,6 +13,7 @@ import {
 } from "@/lib/plant/simulation";
 import { PlantEconomicsPanel } from "@/components/plant/PlantEconomicsPanel";
 import { PlantReport } from "@/components/plant/PlantReport";
+import { PlantVirtualTour } from "@/components/plant/PlantVirtualTour";
 import { PlantControlPanel } from "@/components/plant/PlantControlPanel";
 import { PlantFlowsheet } from "@/components/plant/PlantFlowsheet";
 import { Plant3DView } from "@/components/plant/Plant3DView";
@@ -117,6 +118,7 @@ const PlantSimulator = () => {
             <TabsList className="flex w-full flex-wrap justify-start h-auto">
               <TabsTrigger value="flowsheet">Fluxograma</TabsTrigger>
               <TabsTrigger value="3d">Planta 3D</TabsTrigger>
+              <TabsTrigger value="tour">Tour Virtual</TabsTrigger>
               <TabsTrigger value="energy">Balanço Energético</TabsTrigger>
               <TabsTrigger value="charts">Curvas de Processo</TabsTrigger>
               <TabsTrigger value="streams">Correntes</TabsTrigger>
@@ -129,6 +131,9 @@ const PlantSimulator = () => {
             </TabsContent>
             <TabsContent value="3d" className="mt-3">
               <Plant3DView results={results} />
+            </TabsContent>
+            <TabsContent value="tour" className="mt-3">
+              <PlantVirtualTour results={results} />
             </TabsContent>
             <TabsContent value="energy" className="mt-3">
               <PlantEnergyPanel results={results} />
