@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { Home, BarChart2, FileText, Leaf, Settings, LogOut, Menu } from 'lucide-react';
+import { Home, BarChart2, FileText, Leaf, Factory, Settings, LogOut, Menu } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
   { icon: BarChart2, label: 'Emissions', href: '/emissions' },
   { icon: FileText, label: 'Inventory', href: '/inventory' },
+  { icon: Factory, label: 'Planta NH₃', href: '/plant-simulator' },
   { icon: Leaf, label: 'Projects', href: '/projects' },
   { icon: Settings, label: 'Settings', href: '/settings' },
 ];

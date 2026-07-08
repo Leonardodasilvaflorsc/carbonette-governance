@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Emissions from "./pages/Emissions";
 import Auth from "./pages/Auth";
+import PlantSimulator from "./pages/PlantSimulator";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -91,6 +92,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Emissions />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/plant-simulator"
+              element={
+                <PrivateRoute>
+                  <PlantSimulator />
                 </PrivateRoute>
               }
             />
