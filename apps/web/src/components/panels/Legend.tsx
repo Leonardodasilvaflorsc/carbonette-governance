@@ -19,11 +19,16 @@ export default function Legend() {
   const gasKey = useGlobeStore((s) => s.gasKey);
   const date = useGlobeStore((s) => s.date);
   const layersMeta = useGlobeStore((s) => s.layersMeta);
+  const metaSource = useGlobeStore((s) => s.metaSource);
 
   if (!gasKey) return null;
   const def = GIBS_LAYERS[gasKey];
   const meta = layersMeta?.[gasKey];
   const legend = meta?.legend;
+  // distinto de "legenda ainda não carregada" (cosmético): a descoberta
+  // real confirmou que este ID não existe no catálogo GIBS vigente —
+  // não há imagem nenhuma para exibir, não só falta a legenda
+  const layerMissing = metaSource === "capabilities" && meta?.available === false;
 
   return (
     <div className="glass-panel w-72 rounded-md p-3">
@@ -46,9 +51,15 @@ export default function Legend() {
             <span>{formatPhysical(legend.max)}</span>
           </div>
         </>
+      ) : layerMissing ? (
+        <p className="text-[11px] text-alert-red">
+          Camada indisponível no catálogo GIBS atual (ID não encontrado) — sem imagem para
+          exibir. Escolha outro gás ou aguarde a próxima sincronização.
+        </p>
       ) : (
         <p className="text-[11px] text-alert-amber">
-          Legenda física indisponível (colormap GIBS não carregado)
+          Legenda física ainda não carregada (colormap GIBS) — a imagem pode aparecer
+          normalmente mesmo assim.
         </p>
       )}
 

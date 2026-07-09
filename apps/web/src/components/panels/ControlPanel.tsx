@@ -85,20 +85,39 @@ export default function ControlPanel() {
         {t("panel.gas")}
       </p>
       <div className="mb-3 grid grid-cols-4 gap-1">
-        {GAS_ORDER.map((key) => (
-          <button
-            key={key ?? "base"}
-            onClick={() => setGas(key)}
-            className={`rounded border px-1.5 py-1 font-mono text-xs transition-colors ${
-              gasKey === key
-                ? "border-accent-teal bg-accent-teal/15 text-accent-teal"
-                : "border-white/10 text-text-secondary hover:border-white/25 hover:text-text-primary"
-            }`}
-            title={key ? GIBS_LAYERS[key].label : "Somente visão de satélite"}
-          >
-            {key ? GAS_SHORT[key] : t("panel.base")}
-          </button>
-        ))}
+        {GAS_ORDER.map((key) => {
+          // só é confiável quando a descoberta real (não fallback) confirmou
+          // o ID contra o catálogo GIBS vigente — evita escolher uma camada
+          // sem imagem e ver o mapa em branco sem explicação
+          const unavailable =
+            key !== null && metaSource === "capabilities" && layersMeta?.[key]?.available === false;
+          return (
+            <button
+              key={key ?? "base"}
+              onClick={() => !unavailable && setGas(key)}
+              disabled={unavailable}
+              className={`relative rounded border px-1.5 py-1 font-mono text-xs transition-colors ${
+                gasKey === key
+                  ? "border-accent-teal bg-accent-teal/15 text-accent-teal"
+                  : unavailable
+                    ? "cursor-not-allowed border-white/5 text-text-secondary/40"
+                    : "border-white/10 text-text-secondary hover:border-white/25 hover:text-text-primary"
+              }`}
+              title={
+                unavailable
+                  ? "Indisponível: ID não encontrado no catálogo GIBS atual"
+                  : key
+                    ? GIBS_LAYERS[key].label
+                    : "Somente visão de satélite"
+              }
+            >
+              {key ? GAS_SHORT[key] : t("panel.base")}
+              {unavailable && (
+                <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-alert-red" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
