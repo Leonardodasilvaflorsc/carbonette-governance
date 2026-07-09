@@ -42,11 +42,14 @@ export const GIBS_LAYERS: Record<string, GibsLayerDef> = {
     label: "SO₂ camada limite (OMI)",
   },
   CH4: {
-    id: "AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Monthly",
+    // confirmado contra o WMTSCapabilities.xml real do GIBS em 2026-07;
+    // o nome "Daily_Day" é do próprio catálogo GIBS (produto diário,
+    // composição do período diurno) — não confundir com "_Monthly"
+    id: "AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Daily_Day",
     format: "png",
     maxLevel: 6,
-    cadence: "monthly",
-    label: "CH₄ 400 hPa (AIRS, mensal)",
+    cadence: "daily",
+    label: "CH₄ 400 hPa (AIRS, diário)",
   },
   CO: {
     id: "AIRS_L3_Carbon_Monoxide_500hPa_Volume_Mixing_Ratio_Monthly",

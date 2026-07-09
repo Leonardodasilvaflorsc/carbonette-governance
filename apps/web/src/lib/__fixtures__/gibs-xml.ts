@@ -19,14 +19,14 @@ export const CAPABILITIES_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
       <TileMatrixSetLink><TileMatrixSet>GoogleMapsCompatible_Level6</TileMatrixSet></TileMatrixSetLink>
     </Layer>
     <Layer>
-      <ows:Title xml:lang="en">Methane (400 hPa, Monthly)</ows:Title>
-      <ows:Identifier>AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Monthly</ows:Identifier>
+      <ows:Title xml:lang="en">Methane (400 hPa, Daily Day)</ows:Title>
+      <ows:Identifier>AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Daily_Day</ows:Identifier>
       <ows:Metadata xlink:role="http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3" xlink:href="https://gibs.earthdata.nasa.gov/colormaps/v1.3/AIRS_Methane_400hPa_Volume_Mixing_Ratio.xml"/>
       <Dimension>
         <ows:Identifier>Time</ows:Identifier>
-        <Default>2026-03-01</Default>
-        <Value>2002-09-01/2016-09-01/P1M</Value>
-        <Value>2016-11-01/2026-03-01/P1M</Value>
+        <Default>2026-06-09</Default>
+        <Value>2002-09-01/2016-09-30/P1D</Value>
+        <Value>2016-11-01/2026-06-09/P1D</Value>
       </Dimension>
       <TileMatrixSetLink><TileMatrixSet>GoogleMapsCompatible_Level6</TileMatrixSet></TileMatrixSetLink>
     </Layer>

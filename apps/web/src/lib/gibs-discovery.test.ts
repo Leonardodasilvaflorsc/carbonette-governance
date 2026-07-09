@@ -5,7 +5,7 @@ import { CAPABILITIES_FIXTURE, COLORMAP_FIXTURE } from "./__fixtures__/gibs-xml"
 describe("parseCapabilities", () => {
   const candidates = [
     "OMI_Nitrogen_Dioxide_Tropo_Column",
-    "AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Monthly",
+    "AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Daily_Day",
     "VIIRS_SNPP_DayNightBand_ENCC", // não existe na fixture
   ];
 
@@ -18,9 +18,9 @@ describe("parseCapabilities", () => {
 
   it("usa o último intervalo quando a série temporal tem lacunas", () => {
     const map = parseCapabilities(CAPABILITIES_FIXTURE, candidates);
-    const ch4 = map.get("AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Monthly");
+    const ch4 = map.get("AIRS_L3_Methane_400hPa_Volume_Mixing_Ratio_Daily_Day");
     expect(ch4?.startDate).toBe("2002-09-01");
-    expect(ch4?.endDate).toBe("2026-03-01");
+    expect(ch4?.endDate).toBe("2026-06-09");
   });
 
   it("prefere o colormap v1.3 quando há múltiplas versões", () => {

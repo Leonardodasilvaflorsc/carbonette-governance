@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { GIBS_LAYERS, GLOBE_PRESETS, gibsDefaultDateFor } from "@orbital/shared";
+import { GIBS_LAYERS, GLOBE_PRESETS, gibsDefaultDate, gibsDefaultDateFor } from "@orbital/shared";
 import { useGlobeStore, type LayersMeta } from "./globeStore";
 
 const initial = useGlobeStore.getState();
@@ -16,10 +16,17 @@ describe("globeStore", () => {
   });
 
   it("trocar para gás mensal recalcula a data para o dia 01", () => {
-    useGlobeStore.getState().setGas("CH4");
+    useGlobeStore.getState().setGas("CO");
     const { date } = useGlobeStore.getState();
     expect(date.endsWith("-01")).toBe(true);
-    expect(date).toBe(gibsDefaultDateFor(GIBS_LAYERS.CH4));
+    expect(date).toBe(gibsDefaultDateFor(GIBS_LAYERS.CO));
+  });
+
+  it("trocar para CH4 usa data diária (produto Daily_Day, não mensal)", () => {
+    expect(GIBS_LAYERS.CH4.cadence).toBe("daily");
+    useGlobeStore.getState().setGas("CH4");
+    // diário → "ontem" (gibsDefaultDate), nunca normalizado para dia 01
+    expect(useGlobeStore.getState().date).toBe(gibsDefaultDate());
   });
 
   it("descoberta de camadas limita datas ao intervalo real do produto", () => {

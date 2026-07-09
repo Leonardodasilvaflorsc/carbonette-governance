@@ -35,12 +35,17 @@ describe("gibsDefaultDate", () => {
 
 describe("datas por cadência", () => {
   it("normaliza data de camada mensal para o dia 01", () => {
-    expect(gibsLayerDate(GIBS_LAYERS.CH4, "2026-05-17")).toBe("2026-05-01");
+    expect(gibsLayerDate(GIBS_LAYERS.CO, "2026-05-17")).toBe("2026-05-01");
     expect(gibsLayerDate(GIBS_LAYERS.NO2, "2026-05-17")).toBe("2026-05-17");
   });
 
+  it("CH4 é produto diário (AIRS_L3_..._Daily_Day) — não normaliza para dia 01", () => {
+    expect(GIBS_LAYERS.CH4.cadence).toBe("daily");
+    expect(gibsLayerDate(GIBS_LAYERS.CH4, "2026-05-17")).toBe("2026-05-17");
+  });
+
   it("default mensal fica dois meses atrás (latência de publicação L3)", () => {
-    expect(gibsDefaultDateFor(GIBS_LAYERS.CH4, new Date("2026-06-12T12:00:00Z"))).toBe(
+    expect(gibsDefaultDateFor(GIBS_LAYERS.CO, new Date("2026-06-12T12:00:00Z"))).toBe(
       "2026-04-01"
     );
   });
@@ -54,7 +59,7 @@ describe("datas por cadência", () => {
   it("timeline gera N passos em ordem crescente terminando na data final", () => {
     const dates = timelineDates(GIBS_LAYERS.NO2, "2026-06-10", 5);
     expect(dates).toEqual(["2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09", "2026-06-10"]);
-    const months = timelineDates(GIBS_LAYERS.CH4, "2026-04-15", 3);
+    const months = timelineDates(GIBS_LAYERS.CO, "2026-04-15", 3);
     expect(months).toEqual(["2026-02-01", "2026-03-01", "2026-04-01"]);
   });
 });
