@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import type { Facility } from "@/lib/api";
 import {
+  DEFAULT_BASEMAP,
   GIBS_LAYERS,
+  type BasemapKey,
   type DiscoveredLayer,
   type GasLayerKey,
   type GlobePreset,
@@ -34,6 +36,7 @@ interface GlobeState {
   dateB: string;
   compare: boolean;
   opacity: number;
+  basemap: BasemapKey;
   layersMeta: LayersMeta | null;
   metaSource: "capabilities" | "fallback" | null;
   cameraTarget: CameraTarget | null;
@@ -56,6 +59,7 @@ interface GlobeState {
   setDateB: (date: string) => void;
   setCompare: (enabled: boolean) => void;
   setOpacity: (opacity: number) => void;
+  setBasemap: (basemap: BasemapKey) => void;
   setLayersMeta: (meta: LayersMeta, source: "capabilities" | "fallback") => void;
   flyTo: (center: [number, number], zoom: number) => void;
   applyPreset: (preset: GlobePreset) => void;
@@ -83,6 +87,7 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
   dateB: stepIsoDate(initialDate, "daily", -30),
   compare: false,
   opacity: 0.75,
+  basemap: DEFAULT_BASEMAP,
   layersMeta: null,
   metaSource: null,
   cameraTarget: null,
@@ -123,6 +128,7 @@ export const useGlobeStore = create<GlobeState>((set, get) => ({
 
   setCompare: (compare) => set({ compare }),
   setOpacity: (opacity) => set({ opacity }),
+  setBasemap: (basemap) => set({ basemap }),
 
   setLayersMeta: (meta, source) => {
     const { gasKey, date, dateB } = get();

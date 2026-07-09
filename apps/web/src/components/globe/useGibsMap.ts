@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
-import { GIBS_LAYERS, type GasLayerKey } from "@orbital/shared";
-import { applyGasOverlay, buildGlobeStyle, setBaseDate } from "@/lib/map";
+import { DEFAULT_BASEMAP, GIBS_LAYERS, type BasemapKey, type GasLayerKey } from "@orbital/shared";
+import { applyBasemap, applyGasOverlay, buildGlobeStyle } from "@/lib/map";
 
 export interface GibsMapOptions {
   gasKey: GasLayerKey | null;
   date: string;
   opacity: number;
+  basemap?: BasemapKey;
   center?: [number, number];
   zoom?: number;
 }
 
 /**
  * Cria e mantém um mapa MapLibre em projeção globe com base de satélite
- * GIBS e overlay de gás reativos. Usado pelo globo principal e pelo modo
- * de comparação A/B (duas instâncias sincronizadas).
+ * e overlay de gás reativos. Usado pelo globo principal e pelo modo de
+ * comparação A/B (duas instâncias sincronizadas).
  */
 export function useGibsMap(opts: GibsMapOptions) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,10 +30,11 @@ export function useGibsMap(opts: GibsMapOptions) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const initial = initialRef.current;
+    const basemap = initial.basemap ?? DEFAULT_BASEMAP;
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: buildGlobeStyle(initial.date),
+      style: buildGlobeStyle(basemap, initial.date),
       center: initial.center ?? [-50, -15],
       zoom: initial.zoom ?? 1.8,
       attributionControl: { compact: true },
@@ -55,13 +57,13 @@ export function useGibsMap(opts: GibsMapOptions) {
   // mantém o ref de iniciais atualizado para o 'load' usar o estado corrente
   initialRef.current = opts;
 
-  const { gasKey, date, opacity } = opts;
+  const { gasKey, date, opacity, basemap = DEFAULT_BASEMAP } = opts;
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    setBaseDate(map, date);
+    applyBasemap(map, basemap, date);
     applyGasOverlay(map, gasKey ? { layer: GIBS_LAYERS[gasKey], date, opacity } : null);
-  }, [ready, gasKey, date, opacity]);
+  }, [ready, gasKey, date, opacity, basemap]);
 
   return { containerRef, mapRef, ready };
 }

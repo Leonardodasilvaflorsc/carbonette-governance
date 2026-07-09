@@ -14,9 +14,10 @@ export default function Globe() {
   const gasKey = useGlobeStore((s) => s.gasKey);
   const date = useGlobeStore((s) => s.date);
   const opacity = useGlobeStore((s) => s.opacity);
+  const basemap = useGlobeStore((s) => s.basemap);
   const cameraTarget = useGlobeStore((s) => s.cameraTarget);
 
-  const { containerRef, mapRef, ready } = useGibsMap({ gasKey, date, opacity });
+  const { containerRef, mapRef, ready } = useGibsMap({ gasKey, date, opacity, basemap });
   const rotatingRef = useRef(true);
 
   useFacilitiesOverlay(mapRef, ready);

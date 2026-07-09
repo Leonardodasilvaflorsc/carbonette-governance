@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  BASEMAPS,
   GIBS_LAYERS,
   GLOBE_PRESETS,
+  type BasemapKey,
   type GasLayerKey,
   gibsDefaultDateFor,
   timelineDates,
@@ -38,6 +40,7 @@ export default function ControlPanel() {
     dateB,
     compare,
     opacity,
+    basemap,
     layersMeta,
     metaSource,
     setGas,
@@ -45,6 +48,7 @@ export default function ControlPanel() {
     setDateB,
     setCompare,
     setOpacity,
+    setBasemap,
     applyPreset,
   } = useGlobeStore();
 
@@ -93,6 +97,26 @@ export default function ControlPanel() {
             title={key ? GIBS_LAYERS[key].label : "Somente visão de satélite"}
           >
             {key ? GAS_SHORT[key] : t("panel.base")}
+          </button>
+        ))}
+      </div>
+
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-text-secondary">
+        Base do mapa
+      </p>
+      <div className="mb-3 grid grid-cols-2 gap-1">
+        {(Object.keys(BASEMAPS) as BasemapKey[]).map((key) => (
+          <button
+            key={key}
+            onClick={() => setBasemap(key)}
+            className={`rounded border px-1.5 py-1 text-[10.5px] transition-colors ${
+              basemap === key
+                ? "border-accent-teal bg-accent-teal/15 text-accent-teal"
+                : "border-white/10 text-text-secondary hover:border-white/25 hover:text-text-primary"
+            }`}
+            title={BASEMAPS[key].attribution}
+          >
+            {BASEMAPS[key].label}
           </button>
         ))}
       </div>

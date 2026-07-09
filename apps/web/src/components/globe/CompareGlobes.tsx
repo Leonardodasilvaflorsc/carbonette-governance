@@ -14,9 +14,10 @@ export default function CompareGlobes() {
   const date = useGlobeStore((s) => s.date);
   const dateB = useGlobeStore((s) => s.dateB);
   const opacity = useGlobeStore((s) => s.opacity);
+  const basemap = useGlobeStore((s) => s.basemap);
 
-  const a = useGibsMap({ gasKey, date: dateB, opacity }); // esquerda: data anterior
-  const b = useGibsMap({ gasKey, date, opacity }); // direita: data atual
+  const a = useGibsMap({ gasKey, date: dateB, opacity, basemap }); // esquerda: data anterior
+  const b = useGibsMap({ gasKey, date, opacity, basemap }); // direita: data atual
 
   const [split, setSplit] = useState(50); // % da largura onde está a cortina
   const dragging = useRef(false);
