@@ -1,0 +1,12 @@
+# HTTPS automático (Let's Encrypt) para app e API.
+# APP_DOMAIN e API_DOMAIN vêm do deploy/.env via docker compose.
+
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

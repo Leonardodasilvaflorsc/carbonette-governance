@@ -1,0 +1,11 @@
+# Railway — serviço da API (Root Directory: apps/api)
+# O mesmo build serve para os serviços worker e beat: crie-os apontando para
+# este diretório e sobrescreva o Start Command (ver DEPLOY.md).
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+healthcheckPath = "/health"
+restartPolicyType = "on_failure"

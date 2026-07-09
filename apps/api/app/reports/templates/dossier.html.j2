@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 20mm 18mm;
+    @bottom-left { content: "{{ brand.app_name }} · dossiê {{ report_id }}"; font-size: 7pt; color: #8A94A6; }
+    @bottom-right { content: "página " counter(page) " de " counter(pages); font-size: 7pt; color: #8A94A6; }
+  }
+  @page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+  * { box-sizing: border-box; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1C2530; font-size: 10pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 22pt; margin: 0 0 4pt; }
+  h2 { font-size: 14pt; color: {{ brand.primary }}; border-bottom: 1.5pt solid {{ brand.primary }}; padding-bottom: 3pt; margin: 0 0 10pt; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; }
+  p { margin: 0 0 7pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; font-size: 9pt; }
+  th { text-align: left; background: #EFF3F7; padding: 4pt 6pt; border-bottom: 1pt solid #C9D2DC; }
+  td { padding: 4pt 6pt; border-bottom: 0.5pt solid #E2E8EF; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: avoid; }
+  .muted { color: #5A6472; font-size: 8.5pt; }
+  .callout { background: #F2F6FA; border-left: 3pt solid {{ brand.primary }}; padding: 8pt 10pt; margin: 8pt 0; }
+  .warn { background: #FBF4E4; border-left: 3pt solid #C9963C; padding: 8pt 10pt; margin: 8pt 0; font-size: 9pt; }
+  .kpi-row { width: 100%; margin: 10pt 0; }
+  .kpi { display: inline-block; width: 31%; padding: 8pt 10pt; background: #F2F6FA; border-radius: 3pt; margin-right: 2%; vertical-align: top; }
+  .kpi .v { font-size: 16pt; font-weight: bold; color: {{ brand.primary }}; }
+  .kpi .l { font-size: 8pt; color: #5A6472; }
+  .trace { font-family: "Courier New", monospace; font-size: 7.5pt; color: #5A6472; }
+
+  /* capa */
+  .cover { page: cover; width: 210mm; height: 296mm; background: #0A0E14; color: #E6EBF2; padding: 30mm 24mm; page-break-after: always; }
+  .cover .brand { font-size: 11pt; letter-spacing: 3pt; text-transform: uppercase; color: {{ brand.primary }}; }
+  .cover h1 { color: #FFFFFF; font-size: 26pt; margin-top: 70mm; }
+  .cover .sub { color: #8A94A6; font-size: 11pt; }
+  .cover .meta { position: absolute; bottom: 26mm; left: 24mm; right: 24mm; color: #8A94A6; font-size: 8.5pt; }
+  .coverline { height: 2pt; background: {{ brand.primary }}; width: 40mm; margin: 8pt 0 14pt; }
+</style>
+</head>
+<body>
+
+<!-- 1 · CAPA -->
+<div class="cover">
+  <div class="brand">{{ brand.app_name }}</div>
+  <div class="coverline"></div>
+  <div class="sub">Dossiê técnico de evidência de emissões</div>
+  <h1>{{ facility.name }}</h1>
+  <div class="sub">{{ sector_label }} · {{ facility.country }} · ano de referência {{ facility.ref_year }}</div>
+  <div class="meta">
+    Gerado em {{ generated_at }} · ID {{ report_id }}<br>
+    Rastreabilidade SHA-256: {{ trace_hash }}<br>
+    Documento de screening — ver seção de metodologia e limitações.
+  </div>
+</div>
+
+<!-- 2 · SUMÁRIO EXECUTIVO -->
+<div class="page">
+  <h2>1 · Sumário executivo</h2>
+  <p>Este dossiê consolida a evidência disponível de emissões de gases de efeito estufa da
+  instalação <strong>{{ facility.name }}</strong> ({{ sector_label }}), combinando inventário por
+  instalação ({{ facility.data_source }}), {{ plumes|length }} pluma(s) detectada(s) por
+  sensoriamento remoto e benchmark setorial.</p>
+
+  <div class="kpi-row">
+    <span class="kpi"><span class="v">{{ co2e.total_co2e_t | thousands }}</span><br><span class="l">t CO₂e/ano (GWP100 AR6)</span></span>
+    <span class="kpi"><span class="v">{{ plumes|length }}</span><br><span class="l">plumas detectadas (12 meses)</span></span>
+    <span class="kpi"><span class="v">{{ benchmark.rank }}º</span><br><span class="l">no setor {{ sector_label }} ({{ facility.country }}, {{ benchmark.universe }} instalações)</span></span>
+  </div>
+
+  {% if max_plume %}
+  <div class="callout">
+    Maior pluma quantificada: <strong>{{ max_plume.flux_kg_h | thousands }} ± {{ max_plume.flux_uncertainty_kg_h | thousands }} kg/h</strong>
+    de {{ max_plume.gas }} em {{ max_plume.observed_at[:10] }} ({{ max_plume.instrument or "instrumento n/d" }},
+    método {{ max_plume.method }}).
+  </div>
+  {% endif %}
+
+  <p>O conjunto indica potencial concreto de projetos de redução — detalhados na seção 6 — com
+  exposição regulatória estimada na seção 5.</p>
+  <p class="warn">Dados orbitais e de inventário são estimativas de sensoriamento remoto e modelagem;
+  não substituem inventário GHG Protocol / ISO 14064 verificado. Uso indicado: screening e priorização.</p>
+</div>
+
+<!-- 3 · BASELINE -->
+<div class="page">
+  <h2>2 · Baseline de emissões (inventário)</h2>
+  <p>Emissões anuais por gás reportadas para a instalação (fonte: {{ facility.data_source }},
+  ano {{ facility.ref_year }}), convertidas a CO₂e com GWP100 do IPCC AR6.</p>
+  <table>
+    <tr><th>Gás</th><th class="num">Emissão (t/ano)</th><th>Fator GWP100 (AR6)</th><th class="num">t CO₂e/ano</th></tr>
+    {% for row in co2e.rows %}
+    <tr>
+      <td>{{ row.gas | upper }}</td>
+      <td class="num">{{ row.tons | thousands }}</td>
+      <td>{{ row.gwp }} ({{ row.gwp_key | replace("_", " ") }})</td>
+      <td class="num">{{ row.co2e_t | thousands }}</td>
+    </tr>
+    {% endfor %}
+    <tr><th>Total</th><th></th><th></th><th class="num">{{ co2e.total_co2e_t | thousands }}</th></tr>
+  </table>
+  {% if co2e.excluded_gases %}
+  <p class="muted">Gases monitorados sem fator GWP direto (poluentes/precursores, fora do total CO₂e):
+  {{ co2e.excluded_gases | join(", ") | upper }}.</p>
+  {% endif %}
+  {% if facility.data_source == "dev-fixture" %}
+  <p class="warn">ATENÇÃO: valores de demonstração (dev-fixture) — este dossiê foi gerado em ambiente de
+  desenvolvimento e NÃO contém medições reais desta instalação.</p>
+  {% endif %}
+  <h3>Distinção fundamental</h3>
+  <p class="muted">Concentrações de coluna atmosférica (molec/cm², ppb) não são emissões; fluxos (kg/h) e
+  inventários (t/ano) são grandezas distintas, identificadas como tais em todo este documento.</p>
+</div>
+
+<!-- 4 · PLUMAS -->
+<div class="page">
+  <h2>3 · Plumas detectadas e fluxo estimado</h2>
+  {% if plumes %}
+  <p>Detecções pontuais por espectrômetros orbitais/aéreos nos últimos 12 meses, associadas a esta
+  instalação por proximidade e afinidade setorial. Incertezas a 1σ.</p>
+  {{ plume_chart | safe }}
+  <table>
+    <tr><th>Data</th><th>Gás</th><th class="num">Fluxo (kg/h)</th><th class="num">± 1σ (kg/h)</th><th>Método</th><th>Instrumento</th><th>Fonte</th></tr>
+    {% for p in plumes %}
+    <tr>
+      <td>{{ p.observed_at[:10] }}</td>
+      <td>{{ p.gas }}</td>
+      <td class="num">{{ p.flux_kg_h | thousands if p.flux_kg_h is not none else "n/q" }}</td>
+      <td class="num">{{ p.flux_uncertainty_kg_h | thousands if p.flux_uncertainty_kg_h is not none else "—" }}</td>
+      <td>{{ p.method }}</td>
+      <td>{{ p.instrument or "—" }}</td>
+      <td>{{ p.source }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Sem plumas detectadas associadas a esta instalação no período — inventário apenas.
+  A ausência de detecção não implica ausência de emissão (cobertura e limiar de detecção variam
+  por instrumento e condições de cena).</p>
+  {% endif %}
+</div>
+
+<!-- 5 · BENCHMARK -->
+<div class="page">
+  <h2>4 · Benchmark setorial</h2>
+  <p>Posição da instalação entre as {{ benchmark.universe }} instalações de {{ sector_label }}
+  registradas em {{ facility.country }} (t CO₂e/ano).</p>
+  {{ benchmark_chart | safe }}
+  <p class="callout">{{ facility.name }} ocupa a posição <strong>{{ benchmark.rank }}ª</strong>
+  ({{ benchmark.percentile }}º percentil) — {{ "acima" if benchmark.above_median else "abaixo" }} da
+  mediana setorial de {{ benchmark.median_co2e_t | thousands }} t CO₂e/ano.</p>
+</div>
+
+<!-- 6 · EXPOSIÇÃO REGULATÓRIA -->
+<div class="page">
+  <h2>5 · Exposição regulatória estimada</h2>
+  {% if cbam.applicable %}
+  <p>O setor <strong>{{ cbam.category }}</strong> está no escopo do CBAM (Reg. UE 2023/956).
+  Assumindo fração de exportação à UE de {{ (cbam.export_fraction_eu * 100) | int }}% e preço de
+  carbono de €{{ cbam.carbon_price_eur_t | thousands }}/t:</p>
+  <table>
+    <tr><th>Cenário</th><th class="num">t CO₂e expostas/ano</th><th class="num">Exposição anual (€)</th></tr>
+    <tr><td>CBAM — exportações UE ({{ (cbam.export_fraction_eu * 100) | int }}%)</td>
+        <td class="num">{{ cbam.exposed_co2e_t | thousands }}</td>
+        <td class="num">{{ cbam.annual_exposure_eur | thousands }}</td></tr>
+    <tr><td>Precificação doméstica futura (100% das emissões)</td>
+        <td class="num">{{ co2e.total_co2e_t | thousands }}</td>
+        <td class="num">{{ cbam.full_pricing_eur | thousands }}</td></tr>
+  </table>
+  {% else %}
+  <p>O setor desta instalação não está no escopo direto do CBAM. Cenário de precificação
+  doméstica futura sobre o total de emissões, a €{{ cbam.carbon_price_eur_t | thousands }}/t:</p>
+  <div class="kpi-row">
+    <span class="kpi"><span class="v">€ {{ cbam.full_pricing_eur | thousands }}</span><br><span class="l">exposição anual estimada (100% das emissões)</span></span>
+  </div>
+  {% endif %}
+  <p class="warn">Estimativa de screening, sensível ao preço de carbono e à fração exportada;
+  não constitui aconselhamento jurídico ou tributário.</p>
+</div>
+
+<!-- 7 · OPORTUNIDADES -->
+<div class="page">
+  <h2>6 · Oportunidades de redução</h2>
+  <p>Linhas de projeto típicas para {{ sector_label }}, a validar por diagnóstico no site:</p>
+  {% for opp in opportunities %}
+  <h3>{{ loop.index }}. {{ opp.title }}</h3>
+  <p>{{ opp.body }}</p>
+  {% endfor %}
+  <p class="callout">Próximo passo sugerido: diagnóstico técnico de 4–6 semanas com baseline
+  orbital contínua desta plataforma para priorizar e, depois, comprovar as reduções (antes/depois).</p>
+</div>
+
+<!-- 8 · METODOLOGIA E RASTREABILIDADE -->
+<div class="page">
+  <h2>7 · Metodologia, fontes e limitações</h2>
+  <h3>Fontes de dados</h3>
+  <table>
+    <tr><th>Componente</th><th>Fonte / produto</th></tr>
+    <tr><td>Inventário por instalação</td><td>{{ facility.data_source }} (ano {{ facility.ref_year }})</td></tr>
+    <tr><td>Plumas e fluxo</td><td>{{ plume_sources | join(", ") if plume_sources else "—" }}</td></tr>
+    <tr><td>Conversões CO₂e</td><td>IPCC AR6 GWP100 (CH₄ fóssil 29,8 · biogênico 27,2 · N₂O 273)</td></tr>
+    <tr><td>Vento (inversões próprias)</td><td>Reanálise ERA5 (ECMWF); incerteza 1σ propagada</td></tr>
+  </table>
+  <h3>Métodos de fluxo</h3>
+  <p class="muted">IME: Q = U_eff·IME/L, U_eff = 0,9·U₁₀ + 0,6 m/s (Varon et al., 2018).
+  CSF: Q = U⊥·∫ΔΩdx. Incerteza combina vento e ruído de retrieval (±25%) em quadratura.
+  Filtros de qualidade TROPOMI: qa ≥ 0,5 (CH₄) e qa ≥ 0,75 (NO₂).</p>
+  <h3>Limitações e uso adequado</h3>
+  <p class="muted">Dados orbitais são estimativas de sensoriamento remoto: cobertura intermitente,
+  sensibilidade a nuvens/albedo e limiar de detecção por instrumento. CO₂ por instalação provém de
+  inventário e proxies (NO₂ como traçador de combustão) — TROPOMI não mede CO₂ com precisão útil;
+  arquitetura preparada para a constelação CO2M. Este documento serve como evidência indicativa e
+  ferramenta de priorização; não substitui inventário GHG Protocol/ISO 14064 verificado nem medição
+  direta em fonte.</p>
+  <h3>Rastreabilidade</h3>
+  <p class="trace">Dossiê {{ report_id }} · gerado em {{ generated_at }} · plataforma {{ brand.app_name }} v0.1<br>
+  SHA-256 dos dados de entrada: {{ trace_hash }}<br>
+  Instalação {{ facility.id }} · {{ plumes|length }} plumas · parâmetros: preço carbono €{{ cbam.carbon_price_eur_t }}/t,
+  exportação UE {{ (cbam.export_fraction_eu * 100) | int }}%</p>
+</div>
+
+</body>
+</html>

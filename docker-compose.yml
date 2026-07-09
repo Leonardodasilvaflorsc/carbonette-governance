@@ -1,0 +1,101 @@
+name: orbital-ghg
+
+services:
+  db:
+    image: timescale/timescaledb-ha:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orbital}
+      POSTGRES_USER: ${POSTGRES_USER:-orbital}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orbital-dev-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/home/postgres/pgdata/data
+      - ./infra/db/init.sql:/docker-entrypoint-initdb.d/00-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orbital} -d ${POSTGRES_DB:-orbital}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-orbital}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-orbital-dev-secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-orbital} ${S3_SECRET_KEY:-orbital-dev-secret} &&
+      mc mb --ignore-existing local/${S3_BUCKET_RASTERS:-rasters} &&
+      mc mb --ignore-existing local/${S3_BUCKET_REPORTS:-reports}
+      "
+
+  api:
+    build: ./apps/api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-orbital}:${POSTGRES_PASSWORD:-orbital-dev-password}@db:5432/${POSTGRES_DB:-orbital}
+      REDIS_URL: redis://redis:6379/0
+      # sobrescrito em Codespaces (URL pública do frontend)
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-orbital}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-orbital-dev-secret}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* é embutido no bundle em build-time
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ORBITAL-GHG}
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ORBITAL-GHG}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  miniodata:
