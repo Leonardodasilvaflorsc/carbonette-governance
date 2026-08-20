@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Emissions from "./pages/Emissions";
 import Auth from "./pages/Auth";
+import TcoFleet from "./pages/TcoFleet";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -94,6 +95,8 @@ function App() {
                 </PrivateRoute>
               }
             />
+            {/* Simulador AHS TCO Fleet — ferramenta autônoma, sem dependência de sessão */}
+            <Route path="/tco" element={<TcoFleet />} />
             <Route path="/auth" element={<Auth />} />
           </Routes>
         </BrowserRouter>

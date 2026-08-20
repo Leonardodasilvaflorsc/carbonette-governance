@@ -67,3 +67,69 @@ Simply open [Lovable](https://lovable.dev/projects/a6463ad6-b330-47ff-9a9a-4ab32
 ## I want to use a custom domain - is that possible?
 
 We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+
+---
+
+# AHS TCO Fleet — simulador de TCO comparativo de caminhões
+
+Aplicação de página única, em português do Brasil, que compara o **Custo Total
+de Propriedade** de três configurações de caminhão executando a **mesma missão
+de transporte**: diesel Proconve P8 com SCR, célula a combustível a hidrogênio
+(FCEV) e bateria elétrica (BEV).
+
+Rota da aplicação: **`/tco`** (`npm run dev` e abrir `http://localhost:8080/tco`).
+
+## O que o simulador responde
+
+1. Qual rota tem o menor custo por quilômetro e por tonelada-quilômetro no horizonte analisado.
+2. Em que condições as curvas se cruzam — preço do H₂, do diesel, da energia, quilometragem anual, CAPEX e preço do carbono.
+3. Quanto custa a tonelada de CO₂ evitada em cada rota alternativa (custo marginal de abatimento).
+
+## Organização do código
+
+| Caminho | Conteúdo |
+|---|---|
+| `src/tco/defaults.ts` | Cenário padrão. **Todo** parâmetro numérico do modelo mora aqui, com a fonte do default comentada. |
+| `src/tco/fields.ts` | Rótulo, unidade, faixa plausível, casas decimais e tooltip com a fonte de cada input. |
+| `src/tco/engine/constantes.ts` | Constantes físicas (poder calorífico, densidades) e faixas de verificação. |
+| `src/tco/engine/index.ts` | Motor de cálculo: massa → carga útil → payload → consumo → disponibilidade → frota equivalente → fluxo de caixa → VPL. |
+| `src/tco/engine/finance.ts` | Financiamento (SAC/Price), depreciação fiscal, anualização de CAPEX. |
+| `src/tco/engine/analysis.ts` | Solvers de equilíbrio por bisseção, varredura 1D, mapa de calor, tornado e Monte Carlo. |
+| `src/tco/presets.ts` | Quatro cenários pré-carregados (longa distância, regional, urbano, mineração). |
+| `src/tco/components/` | Abas de entrada, resultados, ponto de equilíbrio, relatório e painel de auditoria. |
+| `src/tco/exportar.ts` | Exportação em XLSX (SheetJS), JSON do cenário e PDF por impressão. |
+
+## Decisões de modelagem que valem registro
+
+- **Comparação por missão, não por veículo.** A carga útil de cada rota é
+  `PBTC + tolerância − tara base − massa do sistema de energia`. Quando ela é
+  menor, o modelo aumenta a quilometragem na mesma proporção (fator de viagens)
+  e recalcula a frota equivalente necessária para atender à mesma demanda anual
+  em tonelada-quilômetro.
+- **Moeda real.** Os escalonamentos de preço são declarados como variação
+  **acima do IPCA** e o WACC é real. A visão nominal apenas reapresenta o fluxo:
+  o VPL é invariante. As prestações de financiamento, contratadas em valores
+  nominais, são deflacionadas mês a mês.
+- **Substituição do pack não é digitada.** O modelo testa a cada ano o SOH
+  mínimo e a autonomia exigida pelo trecho mais longo, e adota o critério que
+  ocorrer primeiro. O custo é projetado pela curva de aprendizado e abatido
+  quando coberto pela garantia.
+- **Hidrogênio.** Os modos B (eletrólise) e C (biomassa) produzem um custo
+  nivelado em R$/kg, que entra como preço na porta do veículo; o CAPEX dessas
+  plantas não é lançado no fluxo do caminhão. A estação de abastecimento, essa
+  sim dedicada à frota, tem o CAPEX imputado na proporção do volume que o
+  veículo retira do total despachado.
+- **Balanço energético.** A energia requerida na roda é escalada por
+  topografia, perfil de rota e peso bruto, e comparada com a energia do tanque
+  ou do pack. Eficiências implícitas fora da faixa esperada geram alerta.
+
+## Logotipo
+
+Coloque o arquivo `ahs-logo.png` em `public/`. Enquanto ele não existir, o
+cabeçalho e o rodapé dos relatórios exibem uma marca textual de mesma altura.
+
+## Exportações
+
+- **PDF**: usa a impressão do navegador, preservando os gráficos em vetor. A aba Relatório traz o layout de impressão.
+- **XLSX**: premissas, resumo, decomposição, fluxo de caixa por rota, operação, auditoria e, quando calculados, equilíbrio, sensibilidade e Monte Carlo.
+- **JSON**: cenário completo, para versionamento e comparação. Ao importar, campos ausentes assumem o default vigente.
