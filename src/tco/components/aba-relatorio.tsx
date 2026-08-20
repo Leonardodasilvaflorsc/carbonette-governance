@@ -1,8 +1,16 @@
 /** Aba de relatório: sumário executivo, premissas, exportações e comparação de cenários. */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { computeScenario } from "../engine";
 import { FIELDS } from "../fields";
-import { exportarJson, exportarPdf, exportarXlsx, importarJson, linhasPremissas, AVISO_LEGAL } from "../exportar";
+import {
+  exportarJson,
+  exportarPdf,
+  exportarXlsx,
+  importarJson,
+  linhasPremissas,
+  rodandoNoVisualizador,
+  AVISO_LEGAL,
+} from "../exportar";
 import { moeda, nf, pct } from "../format";
 import { sumarioExecutivo } from "../resumo";
 import { useTco } from "../store";
@@ -15,7 +23,19 @@ export function AbaRelatorio() {
   const [nomeSalvar, setNomeSalvar] = useState("");
   const [comparar, setComparar] = useState<string[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [noVisualizador, setNoVisualizador] = useState(false);
   const arquivoRef = useRef<HTMLInputElement>(null);
+
+  // No visualizador de artefatos a página não pode iniciar um download por
+  // conta própria: o arquivo é entregue pelo host, com confirmação, e a
+  // planilha fica fora dos formatos aceitos.
+  useEffect(() => {
+    let vivo = true;
+    rodandoNoVisualizador().then((v) => vivo && setNoVisualizador(v));
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const paragrafos = useMemo(() => sumarioExecutivo(scenario, resultado), [scenario, resultado]);
   const premissas = useMemo(() => linhasPremissas(scenario).slice(1), [scenario]);
@@ -37,13 +57,19 @@ export function AbaRelatorio() {
           Exportar PDF (impressão)
         </button>
         <button
-          onClick={() => exportarXlsx(scenario, resultado)}
+          onClick={async () => {
+            const r = await exportarXlsx(scenario, resultado);
+            setErro(r.ok ? null : r.motivo ?? null);
+          }}
           className="border border-[#0D2B55] px-4 py-2 text-[12px] text-[#0D2B55] hover:bg-[#0D2B55] hover:text-white"
         >
           Exportar XLSX
         </button>
         <button
-          onClick={() => exportarJson(scenario)}
+          onClick={async () => {
+            const r = await exportarJson(scenario);
+            setErro(r.ok ? null : r.motivo ?? null);
+          }}
           className="border border-[#0D2B55] px-4 py-2 text-[12px] text-[#0D2B55] hover:bg-[#0D2B55] hover:text-white"
         >
           Exportar JSON do cenário
@@ -75,6 +101,15 @@ export function AbaRelatorio() {
       {erro && (
         <div className="mb-4 print:hidden">
           <Aviso nivel="erro">{erro}</Aviso>
+        </div>
+      )}
+      {noVisualizador && (
+        <div className="mb-4 print:hidden">
+          <Aviso nivel="info">
+            Esta é a versão publicada do simulador. O JSON do cenário é entregue mediante confirmação; a planilha
+            XLSX e a impressão em PDF só funcionam rodando o projeto localmente. O cálculo, os solvers e a
+            simulação de Monte Carlo funcionam integralmente aqui.
+          </Aviso>
         </div>
       )}
 

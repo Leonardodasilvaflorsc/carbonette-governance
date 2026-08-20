@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# build autônomo do simulador AHS TCO Fleet
+dist-tco

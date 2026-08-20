@@ -128,8 +128,23 @@ Rota da aplicação: **`/tco`** (`npm run dev` e abrir `http://localhost:8080/tc
 Coloque o arquivo `ahs-logo.png` em `public/`. Enquanto ele não existir, o
 cabeçalho e o rodapé dos relatórios exibem uma marca textual de mesma altura.
 
+## Gerar uma versão distribuível em arquivo único
+
+```sh
+npm run build:tco
+```
+
+Gera `dist-tco/ahs-tco-fleet.html` — página única com CSS e JS embutidos, sem
+nenhuma dependência externa. Abre direto do disco, vai por e-mail ou sobe em
+qualquer host estático. Usa a entrada `src/tco/standalone.tsx`, que monta só o
+simulador, sem roteador, autenticação ou Supabase.
+
 ## Exportações
 
 - **PDF**: usa a impressão do navegador, preservando os gráficos em vetor. A aba Relatório traz o layout de impressão.
 - **XLSX**: premissas, resumo, decomposição, fluxo de caixa por rota, operação, auditoria e, quando calculados, equilíbrio, sensibilidade e Monte Carlo.
 - **JSON**: cenário completo, para versionamento e comparação. Ao importar, campos ausentes assumem o default vigente.
+
+Quando a página roda dentro de um visualizador que não permite que ela própria
+inicie downloads, as exportações passam pela API de salvamento do host, com
+confirmação do usuário; a aba Relatório avisa quais formatos estão disponíveis.

@@ -9,7 +9,64 @@ import type { BarraTornado, Equilibrio, ResultadoMC } from "./engine/analysis";
 export const AVISO_LEGAL =
   "Simulação baseada em premissas fornecidas pelo usuário. Os resultados não constituem garantia de desempenho, recomendação de investimento ou proposta comercial. Valide os parâmetros com fornecedores e com a legislação vigente antes de qualquer decisão.";
 
-function baixar(conteudo: BlobPart, nome: string, tipo: string) {
+/** Resultado de uma tentativa de exportação, para exibição na interface. */
+export interface ResultadoExportacao {
+  ok: boolean;
+  motivo?: string;
+}
+
+/**
+ * Superfície de salvamento do visualizador de artefatos da claude.ai. Quando a
+ * página roda ali, o navegador não permite que ela própria inicie um download:
+ * o arquivo precisa ser entregue por esta API, com confirmação do usuário.
+ */
+interface JanelaComClaude {
+  claude?: {
+    use?: (nome: string) => Promise<{
+      save(r: { filename: string; data: string | Blob | ArrayBuffer }): Promise<unknown>;
+    } | null>;
+  };
+}
+
+async function superficieDeSalvamento() {
+  const janela = window as unknown as JanelaComClaude;
+  if (!janela.claude?.use) return null;
+  try {
+    return await janela.claude.use("downloads");
+  } catch {
+    return null;
+  }
+}
+
+/** Detecta uma vez se a página está sendo servida pelo visualizador. */
+export const rodandoNoVisualizador = async (): Promise<boolean> =>
+  (await superficieDeSalvamento()) !== null;
+
+const MOTIVOS: Record<string, string> = {
+  declined: "Exportação cancelada.",
+  rate_limited: "Já há um download aguardando confirmação. Tente de novo em instantes.",
+  too_large: "O arquivo passou do limite de 16 MB desta visualização.",
+  rejected_extension:
+    "Esta visualização não entrega arquivos deste formato. Exporte o JSON do cenário e gere a planilha na versão local do simulador.",
+  extension_not_enabled:
+    "Esta visualização não entrega arquivos deste formato. Exporte o JSON do cenário e gere a planilha na versão local do simulador.",
+};
+
+async function baixar(conteudo: BlobPart, nome: string, tipo: string): Promise<ResultadoExportacao> {
+  const superficie = await superficieDeSalvamento();
+  if (superficie) {
+    try {
+      const dados =
+        typeof conteudo === "string" || conteudo instanceof ArrayBuffer
+          ? conteudo
+          : new Blob([conteudo], { type: tipo });
+      await superficie.save({ filename: nome, data: dados });
+      return { ok: true };
+    } catch (e) {
+      const codigo = (e as { code?: string })?.code ?? "";
+      return { ok: false, motivo: MOTIVOS[codigo] ?? "Não foi possível salvar o arquivo nesta visualização." };
+    }
+  }
   const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
   const a = document.createElement("a");
   a.href = url;
@@ -18,13 +75,14 @@ function baixar(conteudo: BlobPart, nome: string, tipo: string) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { ok: true };
 }
 
 const nomeArquivo = (s: Scenario, ext: string) =>
   `AHS-TCO_${(s.meta.nome || "cenario").replace(/[^\w-]+/g, "-").slice(0, 60)}_${s.meta.data}.${ext}`;
 
-export function exportarJson(s: Scenario) {
-  baixar(JSON.stringify(s, null, 2), nomeArquivo(s, "json"), "application/json");
+export function exportarJson(s: Scenario): Promise<ResultadoExportacao> {
+  return baixar(JSON.stringify(s, null, 2), nomeArquivo(s, "json"), "application/json");
 }
 
 export function importarJson(arquivo: File): Promise<Scenario> {
@@ -71,7 +129,7 @@ export function exportarXlsx(
   s: Scenario,
   r: ResultadoCenario,
   extras?: { equilibrios?: Equilibrio[]; tornado?: BarraTornado[]; mc?: ResultadoMC | null },
-) {
+): Promise<ResultadoExportacao> {
   const wb = XLSX.utils.book_new();
 
   // Resumo executivo
@@ -199,7 +257,12 @@ export function exportarXlsx(
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "MonteCarlo");
   }
 
-  XLSX.writeFile(wb, nomeArquivo(s, "xlsx"));
+  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  return baixar(
+    buffer,
+    nomeArquivo(s, "xlsx"),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
 }
 
 /** O PDF é gerado pela impressão do navegador, que preserva os gráficos vetoriais. */
