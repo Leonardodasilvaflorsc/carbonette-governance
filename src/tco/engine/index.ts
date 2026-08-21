@@ -12,6 +12,7 @@
 import type { Scenario } from "../defaults";
 import type {
   Alerta,
+  MetodoPrecoGas,
   Auditoria,
   GrupoCusto,
   LinhaFluxo,
@@ -103,6 +104,10 @@ export interface Ctx {
 // Massa e carga útil (item 8.1)
 // ─────────────────────────────────────────────────────────────────────────────
 function massaSistemaEnergiaKg(sc: Scenario, rota: RouteKey): number {
+  if (rota === "gnv" || rota === "bio") {
+    const g = sc.gas;
+    return g.capacidadeKg * g.massaSistemaKgPorKg + g.massaExtraSistemaKg;
+  }
   if (rota === "diesel") {
     const d = sc.diesel;
     return (
@@ -124,24 +129,45 @@ function massaSistemaEnergiaKg(sc: Scenario, rota: RouteKey): number {
   return b.capacidadeKWh * b.massaPackKgPorKWh + b.massaExtraSistemaKg;
 }
 
+/** Seleciona, entre os campos homônimos de cada rota, o que corresponde a ela. */
+function porRota<T>(rota: RouteKey, v: Record<RouteKey, T>): T {
+  return v[rota];
+}
+
+/** Gás natural e biometano compartilham o mesmo bloco de veículo. */
+const ehGas = (rota: RouteKey) => rota === "gnv" || rota === "bio";
+
 function pbtcDe(sc: Scenario, rota: RouteKey) {
-  return rota === "diesel" ? sc.diesel.pbtcT : rota === "h2" ? sc.h2.pbtcT : sc.bev.pbtcT;
+  return porRota(rota, {
+    diesel: sc.diesel.pbtcT,
+    gnv: sc.gas.pbtcT,
+    bio: sc.gas.pbtcT,
+    h2: sc.h2.pbtcT,
+    bev: sc.bev.pbtcT,
+  });
 }
 function taraBaseDe(sc: Scenario, rota: RouteKey) {
-  return rota === "diesel" ? sc.diesel.taraBaseT : rota === "h2" ? sc.h2.taraBaseT : sc.bev.taraBaseT;
+  return porRota(rota, {
+    diesel: sc.diesel.taraBaseT,
+    gnv: sc.gas.taraBaseT,
+    bio: sc.gas.taraBaseT,
+    h2: sc.h2.taraBaseT,
+    bev: sc.bev.taraBaseT,
+  });
 }
 function toleranciaDe(sc: Scenario, rota: RouteKey) {
   // A tolerância de peso vale apenas para veículos de emissão zero.
-  return rota === "diesel" ? 0 : rota === "h2" ? sc.h2.toleranciaRegulatoriaT : sc.bev.toleranciaRegulatoriaT;
+  return porRota(rota, {
+    diesel: 0,
+    gnv: 0,
+    bio: 0,
+    h2: sc.h2.toleranciaRegulatoriaT,
+    bev: sc.bev.toleranciaRegulatoriaT,
+  });
 }
-/** Seleciona, entre três campos homônimos, o que corresponde à rota. */
-function porRota<T>(rota: RouteKey, diesel: T, h2: T, bev: T): T {
-  return rota === "diesel" ? diesel : rota === "h2" ? h2 : bev;
-}
-
 function precoDe(sc: Scenario, rota: RouteKey): number {
   if (rota === "diesel") return sc.diesel.precoAquisicao;
-  const r = rota === "h2" ? sc.h2 : sc.bev;
+  const r = ehGas(rota) ? sc.gas : rota === "h2" ? sc.h2 : sc.bev;
   if (r.modoPreco === "importacao") {
     const cif = r.impFobUsd * sc.econ.usdBrl * (1 + r.impFreteSeguroPct / 100);
     const comII = cif * (1 + r.impIiPct / 100);
@@ -153,7 +179,13 @@ function precoDe(sc: Scenario, rota: RouteKey): number {
   return r.precoAquisicao;
 }
 function residualCurvaDe(sc: Scenario, rota: RouteKey) {
-  return rota === "diesel" ? sc.diesel.residual : rota === "h2" ? sc.h2.residual : sc.bev.residual;
+  return porRota(rota, {
+    diesel: sc.diesel.residual,
+    gnv: sc.gas.residual,
+    bio: sc.gas.residual,
+    h2: sc.h2.residual,
+    bev: sc.bev.residual,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -172,14 +204,63 @@ function blocoAtivo(ctx: Ctx, f: Fluxo, rota: RouteKey): BlocoAtivo {
   const preco = precoDe(sc, rota);
   const curva = residualCurvaDe(sc, rota);
   const { trib, comuns, fin } = sc;
-  const incentivoCapexPct = porRota(rota, trib.incentivoCapexPctDiesel, trib.incentivoCapexPctH2, trib.incentivoCapexPctBev);
-  const incentivoAnual = porRota(rota, trib.incentivoAnualDiesel, trib.incentivoAnualH2, trib.incentivoAnualBev);
-  const seguroPct = porRota(rota, comuns.seguroPctDiesel, comuns.seguroPctH2, comuns.seguroPctBev);
-  const ipvaPct = porRota(rota, trib.ipvaPctDiesel, trib.ipvaPctH2, trib.ipvaPctBev);
-  const depAnos = porRota(rota, trib.depAnosDiesel, trib.depAnosH2, trib.depAnosBev);
-  const jurosAA = porRota(rota, fin.jurosDiesel, fin.jurosH2, fin.jurosBev);
-  const aluguelMensal = porRota(rota, fin.aluguelMensalDiesel, fin.aluguelMensalH2, fin.aluguelMensalBev);
-  const choque = porRota(rota, sc.diesel.choqueResidualPct, sc.h2.choqueResidualPct, sc.bev.choqueResidualPct);
+  const g = sc.gas;
+  const incentivoCapexPct = porRota(rota, {
+    diesel: trib.incentivoCapexPctDiesel,
+    gnv: trib.incentivoCapexPctGas,
+    bio: trib.incentivoCapexPctGas,
+    h2: trib.incentivoCapexPctH2,
+    bev: trib.incentivoCapexPctBev,
+  });
+  const incentivoAnual = porRota(rota, {
+    diesel: trib.incentivoAnualDiesel,
+    gnv: trib.incentivoAnualGas,
+    bio: trib.incentivoAnualGas,
+    h2: trib.incentivoAnualH2,
+    bev: trib.incentivoAnualBev,
+  });
+  const seguroPct = porRota(rota, {
+    diesel: comuns.seguroPctDiesel,
+    gnv: comuns.seguroPctGas,
+    bio: comuns.seguroPctGas,
+    h2: comuns.seguroPctH2,
+    bev: comuns.seguroPctBev,
+  });
+  const ipvaPct = porRota(rota, {
+    diesel: trib.ipvaPctDiesel,
+    gnv: trib.ipvaPctGas,
+    bio: trib.ipvaPctGas,
+    h2: trib.ipvaPctH2,
+    bev: trib.ipvaPctBev,
+  });
+  const depAnos = porRota(rota, {
+    diesel: trib.depAnosDiesel,
+    gnv: trib.depAnosGas,
+    bio: trib.depAnosGas,
+    h2: trib.depAnosH2,
+    bev: trib.depAnosBev,
+  });
+  const jurosAA = porRota(rota, {
+    diesel: fin.jurosDiesel,
+    gnv: fin.jurosGas,
+    bio: fin.jurosGas,
+    h2: fin.jurosH2,
+    bev: fin.jurosBev,
+  });
+  const aluguelMensal = porRota(rota, {
+    diesel: fin.aluguelMensalDiesel,
+    gnv: fin.aluguelMensalGas,
+    bio: fin.aluguelMensalGas,
+    h2: fin.aluguelMensalH2,
+    bev: fin.aluguelMensalBev,
+  });
+  const choque = porRota(rota, {
+    diesel: sc.diesel.choqueResidualPct,
+    gnv: g.choqueResidualPct,
+    bio: g.choqueResidualPct,
+    h2: sc.h2.choqueResidualPct,
+    bev: sc.bev.choqueResidualPct,
+  });
 
   const capexLiquido = preco * (1 - incentivoCapexPct / 100);
   const aquisicao = zeros(N + 1);
@@ -297,7 +378,14 @@ function custosComuns(ctx: Ctx, f: Fluxo, rota: RouteKey, kmAjustado: number[]) 
     custoMotoristaAno * esc(sc.econ.escMaoObra, t),
   );
   const trein = zeros(N + 1);
-  trein[0] = porRota(rota, c.treinamentoDiesel, c.treinamentoH2, c.treinamentoBev) * c.motoristasPorVeiculo;
+  trein[0] =
+    porRota(rota, {
+      diesel: c.treinamentoDiesel,
+      gnv: c.treinamentoGas,
+      bio: c.treinamentoGas,
+      h2: c.treinamentoH2,
+      bev: c.treinamentoBev,
+    }) * c.motoristasPorVeiculo;
   f.add("treinamento", "Treinamento inicial da equipe", "maoDeObra", trein);
 
   f.addOper("pedagio", "Pedágio", "seguroTributos", (t) => c.pedagioPorKm * kmAjustado[t] * esc(sc.econ.escPecas, t));
@@ -375,14 +463,23 @@ const GRUPOS_DEDUTIVEIS: GrupoCusto[] = [
   "carbono",
 ];
 
-function blocoCarbono(ctx: Ctx, f: Fluxo, emissoesT: number[]) {
+function blocoCarbono(ctx: Ctx, f: Fluxo, rota: RouteKey, emissoesT: number[]) {
   const { sc, N } = ctx;
   const v = zeros(N + 1);
   for (let t = 1; t <= N; t++) v[t] = emissoesT[t] * ctx.precoCarbono[t];
   f.add("carbono", "Custo de carbono", "carbono", v);
-  if (sc.carbono.cbioElegivel && sc.carbono.cbioPorAno > 0) {
+  // Os CBIOs do RenovaBio são emitidos ao produtor do biocombustível; aqui
+  // representam a parcela do valor capturada pela frota que o consome.
+  const cbios = porRota(rota, {
+    diesel: 0,
+    gnv: 0,
+    bio: sc.carbono.cbioPorAnoBio,
+    h2: sc.carbono.cbioPorAnoH2,
+    bev: 0,
+  });
+  if (sc.carbono.cbioElegivel && cbios > 0) {
     const c = zeros(N + 1);
-    for (let t = 1; t <= N; t++) c[t] = -sc.carbono.cbioPorAno * sc.carbono.cbioPreco;
+    for (let t = 1; t <= N; t++) c[t] = -cbios * sc.carbono.cbioPreco;
     f.add("cbio", "Receita de CBIOs (RenovaBio)", "carbono", c);
   }
 }
@@ -447,7 +544,7 @@ interface DadosRota {
 
 function finalizar(ctx: Ctx, f: Fluxo, rota: RouteKey, d: DadosRota): ResultadoRota {
   const { sc, N, wacc } = ctx;
-  blocoCarbono(ctx, f, d.emissoesT);
+  blocoCarbono(ctx, f, rota, d.emissoesT);
   const disp = indisponibilidade(ctx, f, d.horasAbastecimento, d.horasManut, d.horasFalha);
   blocoFiscal(ctx, f, d.bloco, d.depreciacaoExtra);
 
@@ -722,6 +819,326 @@ function calcDiesel(ctx: Ctx): ResultadoRota {
     bloco,
     depreciacaoExtra: zeros(N + 1),
     faixaEficiencia: CONST.EFIC_DIESEL,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROTAS A GÁS: GÁS NATURAL E BIOMETANO
+//
+// As duas rodam o mesmo veículo, a mesma estação e a mesma manutenção. O que
+// muda é a molécula: preço, poder calorífico, densidade, pegada de carbono e
+// modo de suprimento.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Converte o preço do gás para R$/kg, qualquer que seja a base de cotação. */
+function precoGasPorKg(
+  metodo: MetodoPrecoGas,
+  precoM3: number,
+  precoKg: number,
+  precoMMBtu: number,
+  densidadeKgM3: number,
+  pciKWhKg: number,
+): number {
+  if (metodo === "kg") return precoKg;
+  if (metodo === "m3") return densidadeKgM3 > 0 ? precoM3 / densidadeKgM3 : 0;
+  // 1 kg rende `pci` kWh; 1 MMBtu equivale a 293,07 kWh.
+  return (precoMMBtu * pciKWhKg) / CONST.MMBTU_KWH;
+}
+
+/** Custo do biometano produzido na própria operação, a partir do biogás. */
+function custoBiometanoProprio(ctx: Ctx, f?: Fluxo): number {
+  const g = ctx.sc.gas;
+  const substratoAno = g.bSubstratoTDia * 365;
+  const biogasM3 = substratoAno * g.bRendimentoM3BiogasPorT;
+  const metanoM3 = biogasM3 * (g.bTeorMetanoPct / 100) * (1 - g.bPerdaUpgradingPct / 100);
+  const producaoKg = metanoM3 * g.bioDensidadeKgM3;
+  const capexAnual = g.bCapexPlanta * crf(ctx.wacc, g.bVidaPlantaAnos);
+  const opexFixo = (g.bCapexPlanta * g.bOpexFixoPctAno) / 100;
+  const substrato = substratoAno * g.bCustoSubstratoRSt;
+  const digestato = substratoAno * g.bCreditoDigestatoRSt;
+  const custo =
+    producaoKg > 0
+      ? (capexAnual + opexFixo + substrato - digestato) / producaoKg + g.bOpexVariavelRSKg
+      : 0;
+  f?.aud(
+    "Produção anual de biometano",
+    "substrato × rendimento de biogás × teor de metano × (1 − perda no upgrading) × densidade",
+    `${fmt(substratoAno, 0)} t × ${fmt(g.bRendimentoM3BiogasPorT, 1)} m³/t × ${fmt(g.bTeorMetanoPct, 1)}% × (1 − ${fmt(g.bPerdaUpgradingPct, 1)}%) × ${fmt(g.bioDensidadeKgM3, 3)}`,
+    producaoKg,
+    "kg/ano",
+  );
+  f?.aud(
+    "Custo nivelado do biometano próprio",
+    "(CAPEX anualizado + OPEX fixo + substrato − crédito do digestato) ÷ produção + OPEX variável",
+    `(${fmt(capexAnual, 0)} + ${fmt(opexFixo, 0)} + ${fmt(substrato, 0)} − ${fmt(digestato, 0)}) ÷ ${fmt(producaoKg, 0)} + ${fmt(g.bOpexVariavelRSKg, 2)}`,
+    custo,
+    "R$/kg",
+  );
+  return custo;
+}
+
+/** Custo do combustível gasoso na porta do veículo, em R$/kg. */
+export function custoGasPorKg(ctx: Ctx, rota: RouteKey, f?: Fluxo): number {
+  const { sc } = ctx;
+  const g = sc.gas;
+  const bio = rota === "bio";
+  const pci = bio ? g.bioPciKWhKg : g.pciKWhKg;
+  const densidade = bio ? g.bioDensidadeKgM3 : g.densidadeKgM3;
+
+  let base: number;
+  if (bio && g.bioModoSuprimento === "B") {
+    base = custoBiometanoProprio(ctx, f);
+  } else {
+    const metodo = bio ? g.bioMetodoPreco : g.gnvMetodoPreco;
+    base = precoGasPorKg(
+      metodo,
+      bio ? g.bioPrecoM3 : g.gnvPrecoM3,
+      bio ? g.bioPrecoKg : g.gnvPrecoKg,
+      bio ? g.bioPrecoMMBtu : g.gnvPrecoMMBtu,
+      densidade,
+      pci,
+    );
+    const incluiIcms = bio ? g.bioPrecoIncluiIcms : g.gnvPrecoIncluiIcms;
+    if (!incluiIcms) base = base / (1 - sc.trib.icmsGasPct / 100);
+  }
+  const logistica = bio ? g.bioCustoLogisticoKg : g.gnvCustoLogisticoKg;
+  const perdas = bio ? g.bioPerdasTransferenciaPct : g.gnvPerdasTransferenciaPct;
+  const custo = (base + logistica) / (1 - perdas / 100);
+  f?.aud(
+    bio ? "Custo do biometano na porta" : "Custo do gás natural na porta",
+    "(preço na base de cotação convertido para R$/kg + logística) ÷ (1 − perdas de transferência)",
+    `(${fmt(base, 3)} + ${fmt(logistica, 2)}) ÷ (1 − ${fmt(perdas, 2)}%)`,
+    custo,
+    "R$/kg",
+  );
+  return custo;
+}
+
+function calcGas(ctx: Ctx, rota: "gnv" | "bio"): ResultadoRota {
+  const { sc, N } = ctx;
+  const g = sc.gas;
+  const f = new Fluxo(N, rota);
+  const pl = payload(ctx, f, rota);
+  const km = pl.kmAjustado;
+  const bio = rota === "bio";
+  const pci = bio ? g.bioPciKWhKg : g.pciKWhKg;
+
+  // Consumo declarado na base do gás natural. O biometano tem poder calorífico
+  // maior, então a mesma missão exige menos quilos.
+  const kgPor100Nominal =
+    (ctx.pu * g.consumoUrbanoKg100km + ctx.pr * g.consumoRegionalKg100km + ctx.prd * g.consumoRodoviarioKg100km) *
+      ctx.fTopo +
+    g.ajusteConsumoPorTonKg100km * (pl.cargaTransportadaT - g.cargaReferenciaT);
+  const kgPor100 = Math.max(0.5, kgPor100Nominal) * (g.pciKWhKg / Math.max(1, pci));
+  const consumoTotalKgKm = kgPor100 / 100;
+  const energiaTotalKWhKm = consumoTotalKgKm * pci;
+  f.aud(
+    "Consumo específico do motor a gás",
+    "Σ (perfil × kg/100 km) × fator topográfico + ajuste de carga, corrigido pelo poder calorífico",
+    `${fmt(kgPor100Nominal, 2)} × (${fmt(g.pciKWhKg, 2)} ÷ ${fmt(pci, 2)})`,
+    kgPor100,
+    "kg/100 km",
+  );
+
+  // Ciclo HPDI: parte da energia vem de um piloto de diesel, que traz consigo
+  // consumo de ARLA e pós-tratamento.
+  const hpdi = g.ciclo === "hpdi";
+  const fracaoPiloto = hpdi ? clamp(g.pilotoDieselPct / 100, 0, 0.5) : 0;
+  const kgGasPorKm = consumoTotalKgKm * (1 - fracaoPiloto);
+  const litrosPilotoPorKm = (energiaTotalKWhKm * fracaoPiloto) / CONST.PCI_DIESEL_KWH_L;
+
+  const horasOperacaoAno = km[1] / ctx.velocidade;
+  const kgMarchaLenta = horasOperacaoAno * (g.pctMarchaLenta / 100) * g.consumoMarchaLentaKgH;
+  const kgPTO = (sc.mission.ptoPotenciaKW * sc.mission.ptoHorasDia * ctx.dias) / (pci * g.eficienciaMotor);
+  const perdas = bio ? g.bioPerdasTransferenciaPct : g.gnvPerdasTransferenciaPct;
+  // Evaporação do GNL enquanto o veículo está parado.
+  const boilOffAno = (g.capacidadeKg * g.perdasBoilOffPctDia * 365) / 100;
+  const kgAno = (kgGasPorKm * km[1] + kgMarchaLenta + kgPTO) / (1 - perdas / 100) + boilOffAno;
+  const litrosPilotoAno = litrosPilotoPorKm * km[1];
+  f.aud(
+    "Consumo anual de gás",
+    "(rodagem + marcha lenta + PTO) ÷ (1 − perdas) + evaporação",
+    `(${fmt(kgGasPorKm * km[1], 0)} + ${fmt(kgMarchaLenta, 0)} + ${fmt(kgPTO, 0)}) ÷ (1 − ${fmt(perdas, 2)}%) + ${fmt(boilOffAno, 0)}`,
+    kgAno,
+    "kg/ano",
+  );
+
+  // Combustível
+  const custoKg = custoGasPorKg(ctx, rota, f);
+  const escala = bio ? sc.econ.escBio : sc.econ.escGnv;
+  f.addOper(
+    "gas",
+    bio ? "Biometano" : "Gás natural",
+    "energia",
+    (t) => kgAno * custoKg * esc(escala, t),
+  );
+  if (sc.trib.pisCofinsRecupera && sc.trib.regime === "lucroReal") {
+    f.addOper("creditoGas", "Crédito de PIS/COFINS sobre o gás", "energia", (t) =>
+      -kgAno * custoKg * (sc.trib.pisCofinsCombustivelPct / 100) * esc(escala, t),
+    );
+  }
+
+  // Piloto de diesel e ARLA, apenas no ciclo HPDI
+  if (hpdi && litrosPilotoAno > 0) {
+    const d = sc.diesel;
+    const precoDiesel = d.precoDieselL * (d.usarBasePropria ? 1 - d.descontoBasePropriaPct / 100 : 1);
+    f.addOper("pilotoDiesel", "Diesel piloto (HPDI)", "energia", (t) =>
+      litrosPilotoAno * precoDiesel * esc(sc.econ.escDiesel, t),
+    );
+    const litrosArla = litrosPilotoAno * (d.arlaPctDiesel / 100);
+    f.addOper("arlaHpdi", "ARLA 32 (pós-tratamento do piloto)", "arla", (t) =>
+      litrosArla * d.arlaPrecoL * esc(sc.econ.escArla, t),
+    );
+    f.addOper("posTratamentoHpdi", "Pós-tratamento do piloto (SCR e sensores)", "manutencao", (t) =>
+      (km[t] / d.scrVidaKm) * d.scrCusto * esc(sc.econ.escPecas, t) +
+      (km[t] / d.sensorNoxVidaKm) * d.sensorNoxCusto * esc(sc.econ.escPecas, t),
+    );
+  }
+
+  // Estação de abastecimento, rateada pelo volume efetivamente despachado
+  const depreciacaoExtra = zeros(N + 1);
+  const kgDespachadosAno = g.estacaoCapacidadeKgDia * 365 * (g.estacaoUtilizacaoPct / 100);
+  const veiculosEquivalentes = kgAno > 0 ? kgDespachadosAno / kgAno : 1;
+  if (g.usarEstacaoPropria) {
+    const share = kgDespachadosAno > 0 ? Math.min(1, kgAno / kgDespachadosAno) : 1;
+    const capexImputado = g.estacaoCapex * share;
+    const infra = zeros(N + 1);
+    infra[0] = capexImputado;
+    if (N < g.estacaoVidaAnos) infra[N] -= capexImputado * (1 - N / g.estacaoVidaAnos);
+    f.add("estacaoGasCapex", "Estação de abastecimento (CAPEX rateado)", "infraestrutura", infra);
+    f.addOper("estacaoGasOpex", "O&M da estação de abastecimento", "infraestrutura", () =>
+      ((g.estacaoCapex * g.estacaoOpexPctCapexAno) / 100) * share,
+    );
+    f.addOper("estacaoGasEnergia", "Energia da estação (compressão)", "infraestrutura", (t) =>
+      kgAno * g.estacaoConsumoKWhKg * g.estacaoPrecoEnergiaRSKWh * esc(sc.econ.escEnergia, t),
+    );
+    depreciacaoLinear(capexImputado, sc.trib.depAnosGas, N).forEach((v, t) => (depreciacaoExtra[t] += v));
+    f.aud(
+      "Rateio da estação de abastecimento",
+      "consumo anual do veículo ÷ (capacidade × 365 × utilização)",
+      `${fmt(kgAno, 0)} ÷ (${fmt(g.estacaoCapacidadeKgDia, 0)} × 365 × ${fmt(g.estacaoUtilizacaoPct, 1)}%)`,
+      share * 100,
+      "% do CAPEX da estação",
+    );
+  }
+
+  const rateioBase = Math.max(1, Math.round(veiculosEquivalentes));
+  const garagem = zeros(N + 1);
+  garagem[0] = g.adequacaoGaragemCapex / rateioBase;
+  f.add("garagemGas", "Adequação da garagem para gás", "infraestrutura", garagem);
+  f.addOper("garagemGasOpex", "O&M da adequação de garagem", "infraestrutura", () =>
+    g.adequacaoGaragemOpexAno / rateioBase,
+  );
+  f.addOper("treinamentoGas", "Treinamento recorrente em gás", "maoDeObra", () =>
+    g.treinamentoRecorrenteAno / rateioBase,
+  );
+  depreciacaoLinear(garagem[0], sc.trib.depAnosGas, N).forEach((v, t) => (depreciacaoExtra[t] += v));
+
+  // Manutenção
+  const custoOleoPorKm =
+    g.oleoIntervaloKm > 0
+      ? (g.oleoVolumeL * g.oleoPrecoL * (1 + g.outrosFluidosPctOleo / 100)) / g.oleoIntervaloKm
+      : 0;
+  f.addOper("lubrificantesGas", "Lubrificantes de baixa cinza", "energia", (t) =>
+    custoOleoPorKm * km[t] * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("preventivaGas", "Manutenção preventiva", "manutencao", (t) =>
+    g.preventivaPorKm * km[t] * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("velas", "Velas e sistema de ignição", "manutencao", (t) =>
+    (km[t] / g.velasIntervaloKm) * g.velasCusto * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("catalisador", "Catalisador de três vias", "manutencao", (t) =>
+    (km[t] / g.catalisadorVidaKm) * g.catalisadorCusto * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("filtrosGas", "Filtros", "manutencao", (t) =>
+    (km[t] / g.filtrosIntervaloKm) * g.filtrosCusto * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("inspecaoCilindrosGas", "Inspeção periódica dos cilindros", "manutencao", () =>
+    g.inspecaoCilindrosAnos > 0 ? g.inspecaoCilindrosCusto / g.inspecaoCilindrosAnos : 0,
+  );
+  f.addOper("altoValorGas", "Embreagem e arrefecimento", "manutencao", (t) =>
+    (km[t] / g.altoValorVidaKm) * g.altoValorCusto * esc(sc.econ.escPecas, t),
+  );
+  f.addOper("corretivaGas", "Manutenção corretiva não programada", "manutencao", (t) =>
+    g.corretivaAno1 * Math.pow(1 + g.corretivaCrescimentoPctAA / 100, t - 1) * esc(sc.econ.escPecas, t),
+  );
+  pneusEFreios(ctx, f, km, g.fatorVidaPneu, g.fatorVidaFreio);
+  if (g.vidaNormativaCilindrosAnos <= N) {
+    f.alerta(
+      "aviso",
+      `Os cilindros atingem a vida normativa de ${g.vidaNormativaCilindrosAnos} anos dentro do horizonte: prever substituição ou recertificação.`,
+    );
+  }
+
+  f.addOper("zonaRestritaGas", "Restrição de acesso a zonas de baixa emissão", "seguroTributos", () =>
+    ((sc.diesel.receitaAnual * g.zonaRestritaPctRotas) / 100) * (sc.diesel.zonaRestritaCustoPct / 100),
+  );
+
+  custosComuns(ctx, f, rota, km);
+  const bloco = blocoAtivo(ctx, f, rota);
+
+  // Emissões: o metano que escapa sem queimar não vira CO2, mas tem potencial
+  // de aquecimento próprio — é o que decide a vantagem climática do gás fóssil.
+  const c = sc.carbono;
+  const fatorCombustao = bio ? c.fatorBioCombustaoKgKg : c.fatorGnvCombustaoKgKg;
+  const upstream = bio ? c.fatorBioUpstreamKgKg : c.fatorGnvUpstreamKgKg;
+  const evitado = bio ? c.fatorBioEvitadoKgKg : 0;
+  const kgSlip = kgAno * (g.slipMetanoPct / 100);
+  const kgQueimado = kgAno - kgSlip;
+  const emissaoGasAno =
+    (kgQueimado * fatorCombustao + kgAno * (upstream + evitado) + kgSlip * c.gwpMetano) / 1000;
+  const emissaoPilotoAno = (litrosPilotoAno * (c.fatorDieselKgL + c.fatorDieselUpstreamKgL)) / 1000;
+  const emissoes = zeros(N + 1);
+  for (let t = 1; t <= N; t++) emissoes[t] = emissaoGasAno + emissaoPilotoAno;
+  f.aud(
+    "Emissões anuais WTW",
+    "(queimado × fator de combustão + total × (upstream + evitado) + metano não queimado × GWP) ÷ 1000",
+    `(${fmt(kgQueimado, 0)} × ${fmt(fatorCombustao, 2)} + ${fmt(kgAno, 0)} × ${fmt(upstream + evitado, 2)} + ${fmt(kgSlip, 0)} × ${fmt(c.gwpMetano, 0)}) ÷ 1000`,
+    emissaoGasAno,
+    "tCO₂e/ano",
+  );
+  f.aud(
+    "Peso do metano não queimado nas emissões",
+    "metano não queimado × GWP ÷ emissões totais",
+    `${fmt(kgSlip, 0)} kg × ${fmt(c.gwpMetano, 0)} ÷ ${fmt((emissaoGasAno + emissaoPilotoAno) * 1000, 0)}`,
+    emissaoGasAno + emissaoPilotoAno > 0
+      ? ((kgSlip * c.gwpMetano) / 1000 / (emissaoGasAno + emissaoPilotoAno)) * 100
+      : 0,
+    "%",
+  );
+
+  const eventosAbast = kgAno / (g.capacidadeKg * CONST.USO_TANQUE_GAS);
+  const horasAbast = (eventosAbast * g.tempoAbastecimentoMin) / 60;
+  const autonomia = zeros(N + 1).map(() =>
+    kgGasPorKm > 0 ? (g.capacidadeKg * CONST.USO_TANQUE_GAS) / kgGasPorKm : 0,
+  );
+  if (autonomia[1] < sc.mission.distanciaMaxEntrePontosKm) {
+    f.alerta(
+      "aviso",
+      `Autonomia de ${fmt(autonomia[1], 0)} km não cobre o trecho máximo entre pontos de abastecimento (${fmt(sc.mission.distanciaMaxEntrePontosKm, 0)} km). Aumente a capacidade embarcada ou considere GNL.`,
+    );
+  }
+
+  // Motor e pós-tratamento são os mesmos nas duas rotas: os poluentes locais
+  // não dependem da origem da molécula.
+  return finalizar(ctx, f, rota, {
+    ...pl,
+    consumoEspecifico: zeros(N + 1).map((_, t) => (t === 0 ? 0 : kgPor100)),
+    unidadeConsumo: "kg/100 km",
+    energiaTanqueKWhKm: energiaTotalKWhKm,
+    emissoesT: emissoes,
+    noxKg: (c.noxGnvGkm * km[1]) / 1000,
+    mpKg: (c.mpGnvGkm * km[1]) / 1000,
+    horasAbastecimento: horasAbast,
+    horasManut: g.horasParadoManutAno,
+    horasFalha: g.falhaProbAno * g.falhaHorasEvento,
+    autonomia,
+    anoSubstituicao: 0,
+    detalheSubstituicao: "Sem substituição de sistema de energia no horizonte.",
+    bloco,
+    depreciacaoExtra,
+    faixaEficiencia: CONST.EFIC_GAS,
   });
 }
 
@@ -1358,6 +1775,8 @@ export function computeScenario(sc: Scenario): ResultadoCenario {
 
   const rotas = {
     diesel: calcDiesel(ctx),
+    gnv: calcGas(ctx, "gnv"),
+    bio: calcGas(ctx, "bio"),
     h2: calcH2(ctx),
     bev: calcBev(ctx),
   } as Record<RouteKey, ResultadoRota>;

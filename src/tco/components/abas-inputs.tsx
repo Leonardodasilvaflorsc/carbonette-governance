@@ -81,6 +81,8 @@ export function TabMissao() {
         <Campo path="econ.eurBrl" />
         <Campo path="econ.escDiesel" />
         <Campo path="econ.escArla" />
+        <Campo path="econ.escGnv" />
+        <Campo path="econ.escBio" />
         <Campo path="econ.escEnergia" />
         <Campo path="econ.escH2" />
         <Campo path="econ.escMaoObra" />
@@ -96,9 +98,11 @@ export function TabMissao() {
         <Campo path="fin.iofPct" />
         <Campo path="fin.estruturacaoPct" />
         <Campo path="fin.jurosDiesel" />
+        <Campo path="fin.jurosGas" />
         <Campo path="fin.jurosH2" />
         <Campo path="fin.jurosBev" />
         <Campo path="fin.aluguelMensalDiesel" />
+        <Campo path="fin.aluguelMensalGas" />
         <Campo path="fin.aluguelMensalH2" />
         <Campo path="fin.aluguelMensalBev" />
       </Secao>
@@ -111,17 +115,22 @@ export function TabMissao() {
         <Campo path="trib.pisCofinsCombustivelPct" />
         <Campo path="trib.pisCofinsEnergiaPct" />
         <Campo path="trib.icmsEnergiaPct" />
+        <Campo path="trib.icmsGasPct" />
         <Campo path="trib.icmsH2Pct" />
         <Campo path="trib.depAnosDiesel" />
+        <Campo path="trib.depAnosGas" />
         <Campo path="trib.depAnosH2" />
         <Campo path="trib.depAnosBev" />
         <Campo path="trib.ipvaPctDiesel" />
+        <Campo path="trib.ipvaPctGas" />
         <Campo path="trib.ipvaPctH2" />
         <Campo path="trib.ipvaPctBev" />
         <Campo path="trib.incentivoCapexPctDiesel" />
+        <Campo path="trib.incentivoCapexPctGas" />
         <Campo path="trib.incentivoCapexPctH2" />
         <Campo path="trib.incentivoCapexPctBev" />
         <Campo path="trib.incentivoAnualDiesel" />
+        <Campo path="trib.incentivoAnualGas" />
         <Campo path="trib.incentivoAnualH2" />
         <Campo path="trib.incentivoAnualBev" />
       </Secao>
@@ -140,13 +149,22 @@ export function TabMissao() {
         <Campo path="carbono.precoCarbonoVoluntario" />
         <Campo path="carbono.precoCarbonoSbce" />
         <Campo path="carbono.precoCarbonoCbam" />
+        <Campo path="carbono.gwpMetano" />
+        <Campo path="carbono.fatorGnvCombustaoKgKg" />
+        <Campo path="carbono.fatorGnvUpstreamKgKg" />
+        <Campo path="carbono.fatorBioCombustaoKgKg" />
+        <Campo path="carbono.fatorBioUpstreamKgKg" />
+        <Campo path="carbono.fatorBioEvitadoKgKg" />
         <Campo path="carbono.cbioElegivel" />
         <Campo path="carbono.cbioPreco" />
-        <Campo path="carbono.cbioPorAno" />
+        <Campo path="carbono.cbioPorAnoBio" />
+        <Campo path="carbono.cbioPorAnoH2" />
         <Campo path="carbono.noxDieselGkm" />
         <Campo path="carbono.mpDieselGkm" />
         <Campo path="carbono.noxH2Gkm" />
         <Campo path="carbono.mpH2Gkm" />
+        <Campo path="carbono.noxGnvGkm" />
+        <Campo path="carbono.mpGnvGkm" />
         <Campo path="carbono.noxBevGkm" />
         <Campo path="carbono.mpBevGkm" />
       </Secao>
@@ -157,9 +175,11 @@ export function TabMissao() {
         <Campo path="comuns.beneficiosMes" />
         <Campo path="comuns.motoristasPorVeiculo" />
         <Campo path="comuns.treinamentoDiesel" />
+        <Campo path="comuns.treinamentoGas" />
         <Campo path="comuns.treinamentoH2" />
         <Campo path="comuns.treinamentoBev" />
         <Campo path="comuns.seguroPctDiesel" />
+        <Campo path="comuns.seguroPctGas" />
         <Campo path="comuns.seguroPctH2" />
         <Campo path="comuns.seguroPctBev" />
         <Campo path="comuns.telemetriaMes" />
@@ -260,6 +280,192 @@ export function TabDiesel() {
         <Campo path="diesel.choqueResidualPct" />
         <Campo path="diesel.descontoReceitaPct" />
         <Campo path="diesel.receitaAnual" />
+      </Secao>
+    </>
+  );
+}
+
+export function TabGas() {
+  const { scenario } = useTco();
+  const g = scenario.gas;
+  return (
+    <>
+      <div className="mb-4">
+        <Aviso nivel="info">
+          Gás natural e biometano rodam no <strong>mesmo caminhão</strong>: mesmo motor, mesmos cilindros, mesma
+          estação, mesma manutenção. Por isso os blocos de veículo, manutenção e infraestrutura abaixo valem para as
+          duas rotas, e só os blocos de combustível as diferenciam. Para comparar dois veículos distintos — um GNL de
+          longo curso contra um GNC urbano, por exemplo — use dois cenários salvos.
+        </Aviso>
+      </div>
+
+      <Secao titulo="Veículo">
+        <Campo path="gas.modoPreco" />
+        <Campo path="gas.precoAquisicao" />
+        <Campo path="gas.precoSemImpostos" />
+        <Campo path="gas.impFobUsd" />
+        <Campo path="gas.impFreteSeguroPct" />
+        <Campo path="gas.impIiPct" />
+        <Campo path="gas.impIpiPct" />
+        <Campo path="gas.impIcmsPct" />
+        <Campo path="gas.impDespachoPct" />
+        <Campo path="gas.configuracao" />
+        <Campo path="gas.potenciaCv" />
+        <Campo path="gas.ciclo" />
+        <Campo path="gas.pilotoDieselPct" />
+        <Campo path="gas.pbtcT" />
+        <Campo path="gas.taraBaseT" />
+        <Campo path="gas.vidaUtilAnos" />
+        <CurvaResidual path="gas.residual" />
+      </Secao>
+
+      <Secao
+        titulo="Armazenamento a bordo"
+        descricao="A escolha entre GNC e GNL decide autonomia, massa e evaporação. Declare a forma adotada e ajuste os três parâmetros seguintes de forma coerente."
+      >
+        <Campo path="gas.armazenamento" />
+        <Campo path="gas.capacidadeKg" />
+        <Campo path="gas.massaSistemaKgPorKg" />
+        <Campo path="gas.massaExtraSistemaKg" />
+        <Campo path="gas.perdasBoilOffPctDia" />
+        <Campo path="gas.tempoAbastecimentoMin" />
+      </Secao>
+
+      <Secao
+        titulo="Consumo e propriedades do combustível"
+        descricao="Declare o consumo sempre na base do gás natural. O motor de cálculo corrige automaticamente para o poder calorífico maior do biometano."
+      >
+        <Campo path="gas.consumoUrbanoKg100km" />
+        <Campo path="gas.consumoRegionalKg100km" />
+        <Campo path="gas.consumoRodoviarioKg100km" />
+        <Campo path="gas.cargaReferenciaT" />
+        <Campo path="gas.ajusteConsumoPorTonKg100km" />
+        <Campo path="gas.pctMarchaLenta" />
+        <Campo path="gas.consumoMarchaLentaKgH" />
+        <Campo path="gas.eficienciaMotor" />
+        <Campo path="gas.pciKWhKg" />
+        <Campo path="gas.densidadeKgM3" />
+        <Campo path="gas.bioPciKWhKg" />
+        <Campo path="gas.bioDensidadeKgM3" />
+        <Campo path="gas.slipMetanoPct" />
+        <div className="md:col-span-2 xl:col-span-3">
+          <Aviso nivel="aviso">
+            O metano não queimado é o parâmetro que decide se o gás natural tem ou não vantagem climática sobre o
+            diesel. Com GWP de 28, cada ponto percentual de slip acrescenta cerca de 0,28 kgCO₂e por quilo de gás
+            consumido. Confira o peso dele no painel de auditoria da rota.
+          </Aviso>
+        </div>
+      </Secao>
+
+      <Secao titulo="Combustível — gás natural fóssil">
+        <Campo path="gas.gnvMetodoPreco" />
+        {g.gnvMetodoPreco === "m3" && <Campo path="gas.gnvPrecoM3" />}
+        {g.gnvMetodoPreco === "kg" && <Campo path="gas.gnvPrecoKg" />}
+        {g.gnvMetodoPreco === "mmbtu" && <Campo path="gas.gnvPrecoMMBtu" />}
+        <Campo path="gas.gnvPrecoIncluiIcms" />
+        <Campo path="gas.gnvCustoLogisticoKg" />
+        <Campo path="gas.gnvPerdasTransferenciaPct" />
+        <Campo path="econ.escGnv" />
+      </Secao>
+
+      <Secao titulo="Combustível — biometano">
+        <Campo path="gas.bioModoSuprimento" />
+        {g.bioModoSuprimento === "A" && (
+          <>
+            <Campo path="gas.bioMetodoPreco" />
+            {g.bioMetodoPreco === "m3" && <Campo path="gas.bioPrecoM3" />}
+            {g.bioMetodoPreco === "kg" && <Campo path="gas.bioPrecoKg" />}
+            {g.bioMetodoPreco === "mmbtu" && <Campo path="gas.bioPrecoMMBtu" />}
+            <Campo path="gas.bioPrecoIncluiIcms" />
+          </>
+        )}
+        <Campo path="gas.bioCustoLogisticoKg" />
+        <Campo path="gas.bioPerdasTransferenciaPct" />
+        <Campo path="econ.escBio" />
+      </Secao>
+
+      {g.bioModoSuprimento === "B" && (
+        <Secao
+          titulo="Biometano — produção própria a partir de biogás"
+          descricao="O custo do biometano passa a ser o custo nivelado da planta: CAPEX anualizado, OPEX, substrato e crédito do digestato, divididos pela produção."
+        >
+          <Campo path="gas.bSubstratoTDia" />
+          <Campo path="gas.bCustoSubstratoRSt" />
+          <Campo path="gas.bRendimentoM3BiogasPorT" />
+          <Campo path="gas.bTeorMetanoPct" />
+          <Campo path="gas.bPerdaUpgradingPct" />
+          <Campo path="gas.bCapexPlanta" />
+          <Campo path="gas.bOpexFixoPctAno" />
+          <Campo path="gas.bOpexVariavelRSKg" />
+          <Campo path="gas.bVidaPlantaAnos" />
+          <Campo path="gas.bCreditoDigestatoRSt" />
+        </Secao>
+      )}
+
+      <Secao titulo="Estação de abastecimento" descricao="O CAPEX da estação é imputado ao veículo na proporção do volume que ele retira do total despachado.">
+        <Campo path="gas.usarEstacaoPropria" />
+        <Campo path="gas.estacaoCapex" />
+        <Campo path="gas.estacaoVidaAnos" />
+        <Campo path="gas.estacaoOpexPctCapexAno" />
+        <Campo path="gas.estacaoConsumoKWhKg" />
+        <Campo path="gas.estacaoPrecoEnergiaRSKWh" />
+        <Campo path="gas.estacaoCapacidadeKgDia" />
+        <Campo path="gas.estacaoUtilizacaoPct" />
+      </Secao>
+
+      <Secao titulo="Manutenção">
+        <Campo path="gas.preventivaPorKm" />
+        <Campo path="gas.velasCusto" />
+        <Campo path="gas.velasIntervaloKm" />
+        <Campo path="gas.catalisadorCusto" />
+        <Campo path="gas.catalisadorVidaKm" />
+        <Campo path="gas.oleoVolumeL" />
+        <Campo path="gas.oleoPrecoL" />
+        <Campo path="gas.oleoIntervaloKm" />
+        <Campo path="gas.outrosFluidosPctOleo" />
+        <Campo path="gas.filtrosCusto" />
+        <Campo path="gas.filtrosIntervaloKm" />
+        <Campo path="gas.inspecaoCilindrosAnos" />
+        <Campo path="gas.inspecaoCilindrosCusto" />
+        <Campo path="gas.vidaNormativaCilindrosAnos" />
+        <Campo path="gas.altoValorCusto" />
+        <Campo path="gas.altoValorVidaKm" />
+        <Campo path="gas.corretivaAno1" />
+        <Campo path="gas.corretivaCrescimentoPctAA" />
+        <Campo path="gas.fatorVidaPneu" />
+        <Campo path="gas.fatorVidaFreio" />
+        <Campo path="gas.horasParadoManutAno" />
+        <Campo path="gas.falhaProbAno" />
+        <Campo path="gas.falhaHorasEvento" />
+      </Secao>
+
+      <Secao titulo="Segurança, garagem e risco">
+        <Campo path="gas.adequacaoGaragemCapex" />
+        <Campo path="gas.adequacaoGaragemOpexAno" />
+        <Campo path="gas.treinamentoRecorrenteAno" />
+        <Campo path="gas.zonaRestritaPctRotas" />
+        <Campo path="gas.choqueResidualPct" />
+      </Secao>
+
+      <Secao titulo="Emissões e tributos específicos" descricao="Os fatores de emissão e o GWP do metano também aparecem na aba Missão; estão repetidos aqui por serem decisivos nesta rota.">
+        <Campo path="carbono.gwpMetano" />
+        <Campo path="carbono.fatorGnvCombustaoKgKg" />
+        <Campo path="carbono.fatorGnvUpstreamKgKg" />
+        <Campo path="carbono.fatorBioCombustaoKgKg" />
+        <Campo path="carbono.fatorBioUpstreamKgKg" />
+        <Campo path="carbono.fatorBioEvitadoKgKg" />
+        <Campo path="carbono.noxGnvGkm" />
+        <Campo path="carbono.mpGnvGkm" />
+        <Campo path="carbono.cbioPorAnoBio" />
+        <Campo path="trib.icmsGasPct" />
+        <Campo path="comuns.seguroPctGas" />
+        <Campo path="comuns.treinamentoGas" />
+        <Campo path="trib.depAnosGas" />
+        <Campo path="trib.ipvaPctGas" />
+        <Campo path="trib.incentivoCapexPctGas" />
+        <Campo path="trib.incentivoAnualGas" />
+        <Campo path="fin.jurosGas" />
+        <Campo path="fin.aluguelMensalGas" />
       </Secao>
     </>
   );

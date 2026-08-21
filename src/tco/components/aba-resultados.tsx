@@ -15,7 +15,17 @@ import {
 } from "recharts";
 import { moeda, moedaCompacta, nf, pct } from "../format";
 import { useTco } from "../store";
-import { GRUPO_LABEL, GRUPO_ORDEM, ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL, type GrupoCusto, type RouteKey } from "../types";
+import {
+  GRUPO_LABEL,
+  GRUPO_ORDEM,
+  porRotas,
+  ROTAS_ALTERNATIVAS,
+  ROUTE_COLOR,
+  ROUTE_KEYS,
+  ROUTE_LABEL,
+  type GrupoCusto,
+  type RouteKey,
+} from "../types";
 import { Aviso, Secao } from "./ui";
 
 /** Paleta dos componentes de custo, derivada das cores institucionais. */
@@ -52,7 +62,7 @@ export function AbaResultados() {
 
   const acumulado = useMemo(() => {
     const wacc = scenario.econ.wacc / 100;
-    const acc: Record<RouteKey, number> = { diesel: 0, h2: 0, bev: 0 };
+    const acc: Record<RouteKey, number> = porRotas(() => 0);
     return resultado.anos.map((t) => {
       const p: Record<string, number> = { ano: t };
       for (const r of ROUTE_KEYS) {
@@ -264,48 +274,52 @@ export function AbaResultados() {
 
       <Secao titulo="Delta contra o diesel por componente de custo" descricao="Quanto cada rota alternativa economiza ou gasta a mais, em VPL e em percentual." colunas={1}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[11px]">
+          <table className="w-full min-w-[900px] border-collapse text-[11px]">
             <thead>
               <tr className="bg-[#0D2B55] text-white">
                 <th className="p-2 text-left font-medium">Componente</th>
                 <th className="p-2 text-right font-medium">Diesel</th>
-                <th className="p-2 text-right font-medium">Hidrogênio</th>
-                <th className="p-2 text-right font-medium">Δ H₂</th>
-                <th className="p-2 text-right font-medium">Δ H₂ %</th>
-                <th className="p-2 text-right font-medium">Elétrico</th>
-                <th className="p-2 text-right font-medium">Δ BEV</th>
-                <th className="p-2 text-right font-medium">Δ BEV %</th>
+                {ROTAS_ALTERNATIVAS.map((r) => (
+                  <React.Fragment key={r}>
+                    <th className="p-2 text-right font-medium">{ROUTE_LABEL[r]}</th>
+                    <th className="p-2 text-right font-medium">Δ</th>
+                  </React.Fragment>
+                ))}
               </tr>
             </thead>
             <tbody className="[&_td]:border-b [&_td]:border-[#EEEEEE] [&_td]:p-2 [&_td:not(:first-child)]:text-right [&_td:not(:first-child)]:font-mono [&_td:not(:first-child)]:tabular-nums">
               {GRUPO_ORDEM.map((g) => {
                 const d = resultado.rotas.diesel.porGrupo[g];
-                const h = resultado.rotas.h2.porGrupo[g];
-                const b = resultado.rotas.bev.porGrupo[g];
-                if (!d && !h && !b) return null;
-                const p = (v: number) => (Math.abs(d) > 1e-6 ? pct(((v - d) / Math.abs(d)) * 100, 0) : "—");
+                const valores = ROTAS_ALTERNATIVAS.map((r) => resultado.rotas[r].porGrupo[g]);
+                if (!d && valores.every((v) => !v)) return null;
                 return (
                   <tr key={g}>
                     <td>{GRUPO_LABEL[g]}</td>
                     <td>{moeda(d)}</td>
-                    <td>{moeda(h)}</td>
-                    <td className={h - d > 0 ? "text-[#C0392B]" : "text-[#3C6B0A]"}>{moeda(h - d)}</td>
-                    <td>{p(h)}</td>
-                    <td>{moeda(b)}</td>
-                    <td className={b - d > 0 ? "text-[#C0392B]" : "text-[#3C6B0A]"}>{moeda(b - d)}</td>
-                    <td>{p(b)}</td>
+                    {valores.map((v, i) => (
+                      <React.Fragment key={i}>
+                        <td>{moeda(v)}</td>
+                        <td className={v - d > 0 ? "text-[#C0392B]" : "text-[#3C6B0A]"}>{moeda(v - d)}</td>
+                      </React.Fragment>
+                    ))}
                   </tr>
                 );
               })}
               <tr className="bg-[#F4F4F4] font-semibold">
                 <td>TCO total</td>
                 <td>{moeda(resultado.rotas.diesel.tco)}</td>
-                <td>{moeda(resultado.rotas.h2.tco)}</td>
-                <td>{moeda(resultado.rotas.h2.tco - resultado.rotas.diesel.tco)}</td>
-                <td>{pct(((resultado.rotas.h2.tco - resultado.rotas.diesel.tco) / resultado.rotas.diesel.tco) * 100, 0)}</td>
-                <td>{moeda(resultado.rotas.bev.tco)}</td>
-                <td>{moeda(resultado.rotas.bev.tco - resultado.rotas.diesel.tco)}</td>
-                <td>{pct(((resultado.rotas.bev.tco - resultado.rotas.diesel.tco) / resultado.rotas.diesel.tco) * 100, 0)}</td>
+                {ROTAS_ALTERNATIVAS.map((r) => {
+                  const d = resultado.rotas.diesel.tco;
+                  const v = resultado.rotas[r].tco;
+                  return (
+                    <React.Fragment key={r}>
+                      <td>{moeda(v)}</td>
+                      <td className={v - d > 0 ? "text-[#C0392B]" : "text-[#3C6B0A]"}>
+                        {pct(((v - d) / d) * 100, 0)}
+                      </td>
+                    </React.Fragment>
+                  );
+                })}
               </tr>
             </tbody>
           </table>

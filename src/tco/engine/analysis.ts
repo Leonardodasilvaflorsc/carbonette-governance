@@ -6,8 +6,8 @@
  */
 import type { Scenario } from "../defaults";
 import type { McSpec, ResultadoCenario, RouteKey } from "../types";
-import { ROUTE_KEYS } from "../types";
-import { computeScenario, custoH2Efetivo } from "./index";
+import { porRotas, ROUTE_KEYS } from "../types";
+import { computeScenario, custoGasPorKg, custoH2Efetivo, type Ctx as CtxGas } from "./index";
 import { getPath, resolverRaiz, setPathMut } from "./util";
 
 const clone = (s: Scenario): Scenario => JSON.parse(JSON.stringify(s));
@@ -27,6 +27,18 @@ export interface Variavel {
   aplicar: (s: Scenario, x: number) => void;
   /** Texto curto explicando o que o solver está movendo. */
   nota?: string;
+}
+
+/**
+ * Preço do gás em R$/m³ equivalente na porta do veículo, qualquer que seja a
+ * base de cotação ou o modo de suprimento declarado. É essa grandeza que os
+ * solvers movem.
+ */
+export function precoGasEquivalenteM3(s: Scenario, rota: "gnv" | "bio"): number {
+  const ctx = { sc: s, wacc: s.econ.wacc / 100 } as unknown as CtxGas;
+  const porKg = custoGasPorKg(ctx, rota);
+  const densidade = rota === "bio" ? s.gas.bioDensidadeKgM3 : s.gas.densidadeKgM3;
+  return porKg * densidade;
 }
 
 /** Converte qualquer modo de suprimento de H₂ em um preço direto equivalente. */
@@ -63,6 +75,90 @@ export const VARIAVEIS: Record<string, Variavel> = {
       s.h2.aPerdasTransferenciaPct = 0;
     },
     nota: "Preço equivalente na porta do veículo, já somada a logística do modo de suprimento ativo.",
+  },
+  precoGnv: {
+    key: "precoGnv",
+    label: "Preço do gás natural",
+    unit: "R$/m³",
+    dec: 2,
+    min: 0,
+    max: 30,
+    ler: (s) => precoGasEquivalenteM3(s, "gnv"),
+    aplicar: (s, x) => {
+      s.gas.gnvMetodoPreco = "m3";
+      s.gas.gnvPrecoM3 = x;
+      s.gas.gnvCustoLogisticoKg = 0;
+    },
+    nota: "Preço equivalente por metro cúbico na porta do veículo, já somada a logística da base de cotação ativa.",
+  },
+  precoBio: {
+    key: "precoBio",
+    label: "Preço do biometano",
+    unit: "R$/m³",
+    dec: 2,
+    min: 0,
+    max: 30,
+    ler: (s) => precoGasEquivalenteM3(s, "bio"),
+    aplicar: (s, x) => {
+      s.gas.bioModoSuprimento = "A";
+      s.gas.bioMetodoPreco = "m3";
+      s.gas.bioPrecoM3 = x;
+      s.gas.bioCustoLogisticoKg = 0;
+    },
+    nota: "Preço equivalente por metro cúbico na porta do veículo. Quando o modo de suprimento é produção própria, o solver converte o custo nivelado da planta em preço equivalente.",
+  },
+  capexGas: {
+    key: "capexGas",
+    label: "CAPEX do caminhão a gás",
+    unit: "R$",
+    dec: 0,
+    min: 0,
+    max: 6000000,
+    ler: (s) => s.gas.precoAquisicao,
+    aplicar: (s, x) => {
+      s.gas.modoPreco = "direto";
+      s.gas.precoAquisicao = x;
+    },
+  },
+  consumoGas: {
+    key: "consumoGas",
+    label: "Consumo específico do motor a gás",
+    unit: "kg/100 km (rodoviário)",
+    dec: 2,
+    min: 5,
+    max: 80,
+    ler: (s) => s.gas.consumoRodoviarioKg100km,
+    aplicar: (s, x) => {
+      const f = s.gas.consumoRodoviarioKg100km > 0 ? x / s.gas.consumoRodoviarioKg100km : 1;
+      escalar(["gas.consumoUrbanoKg100km", "gas.consumoRegionalKg100km"])(s, f);
+      s.gas.consumoRodoviarioKg100km = x;
+    },
+    nota: "Os perfis urbano e regional acompanham na mesma proporção.",
+  },
+  slipMetano: {
+    key: "slipMetano",
+    label: "Metano não queimado",
+    unit: "%",
+    dec: 2,
+    min: 0,
+    max: 10,
+    ler: (s) => s.gas.slipMetanoPct,
+    aplicar: (s, x) => {
+      s.gas.slipMetanoPct = x;
+    },
+    nota: "Só altera emissões e custo de carbono; não muda o consumo declarado.",
+  },
+  utilizacaoEstacaoGas: {
+    key: "utilizacaoEstacaoGas",
+    label: "Taxa de utilização da estação de gás",
+    unit: "%",
+    dec: 1,
+    min: 1,
+    max: 100,
+    ler: (s) => s.gas.estacaoUtilizacaoPct,
+    aplicar: (s, x) => {
+      s.gas.estacaoUtilizacaoPct = x;
+    },
   },
   precoDiesel: {
     key: "precoDiesel",
@@ -256,6 +352,27 @@ export const VARIAVEIS: Record<string, Variavel> = {
   },
 };
 
+/**
+ * Antes de mover um preço de combustível, o cenário é convertido para o modo
+ * de compra direta equivalente, para que o solver tenha uma variável contínua
+ * sobre a qual atuar mesmo quando o suprimento é produção própria.
+ */
+function normalizarSuprimento(s: Scenario, varKey: string): Scenario {
+  if (varKey === "precoH2") return normalizarSuprimentoH2(s);
+  if (varKey === "precoBio" && s.gas.bioModoSuprimento === "B") {
+    const equivalente = precoGasEquivalenteM3(s, "bio");
+    const c = clone(s);
+    c.gas.bioModoSuprimento = "A";
+    c.gas.bioMetodoPreco = "m3";
+    c.gas.bioPrecoM3 = equivalente;
+    c.gas.bioPrecoIncluiIcms = true;
+    c.gas.bioCustoLogisticoKg = 0;
+    c.gas.bioPerdasTransferenciaPct = 0;
+    return c;
+  }
+  return s;
+}
+
 /** Métrica comparável entre rotas: R$ por tonelada-quilômetro. */
 export const metrica = (r: ResultadoCenario, rota: RouteKey) => r.rotas[rota].tcoPorTKm;
 
@@ -278,7 +395,7 @@ export function resolverEquilibrio(
   b: RouteKey,
 ): Equilibrio {
   const v = VARIAVEIS[varKey];
-  const base = varKey === "precoH2" ? normalizarSuprimentoH2(sc) : sc;
+  const base = normalizarSuprimento(sc, varKey);
   const atual = v.ler(base);
   const f = (x: number) => {
     const c = clone(base);
@@ -306,7 +423,7 @@ export function resolverEquilibrio(
 /** Varredura unidimensional: TCO/t·km das três rotas ao longo de uma variável. */
 export function varredura(sc: Scenario, varKey: string, lo: number, hi: number, passos = 25) {
   const v = VARIAVEIS[varKey];
-  const base = varKey === "precoH2" ? normalizarSuprimentoH2(sc) : sc;
+  const base = normalizarSuprimento(sc, varKey);
   const pontos: { x: number; diesel: number; h2: number; bev: number }[] = [];
   for (let i = 0; i <= passos; i++) {
     const x = lo + ((hi - lo) * i) / passos;
@@ -331,8 +448,7 @@ export function mapaCalor(
 ) {
   const vx = VARIAVEIS[varX];
   const vy = VARIAVEIS[varY];
-  let base = sc;
-  if (varX === "precoH2" || varY === "precoH2") base = normalizarSuprimentoH2(sc);
+  const base = normalizarSuprimento(normalizarSuprimento(sc, varX), varY);
   const celulas: { x: number; y: number; vencedor: RouteKey; margemPct: number }[] = [];
   for (let i = 0; i <= n; i++) {
     for (let j = 0; j <= n; j++) {
@@ -463,11 +579,11 @@ export function monteCarlo(
   rotulo: (p: string) => string,
 ): ResultadoMC {
   const paths = Object.keys(specs);
-  const amostras: Record<RouteKey, number[]> = { diesel: [], h2: [], bev: [] };
+  const amostras: Record<RouteKey, number[]> = porRotas(() => [] as number[]);
   const entradas: Record<string, number[]> = {};
   paths.forEach((p) => (entradas[p] = []));
-  const vitorias: Record<RouteKey, number> = { diesel: 0, h2: 0, bev: 0 };
-  const melhorQueDiesel: Record<RouteKey, number> = { diesel: 0, h2: 0, bev: 0 };
+  const vitorias: Record<RouteKey, number> = porRotas(() => 0);
+  const melhorQueDiesel: Record<RouteKey, number> = porRotas(() => 0);
 
   const trabalho = clone(sc);
   for (let i = 0; i < iteracoes; i++) {
@@ -487,8 +603,7 @@ export function monteCarlo(
       if (r.rotas[k].tcoPorTKm < r.rotas.diesel.tcoPorTKm) melhorQueDiesel[k]++;
   }
 
-  const mk = (fn: (k: RouteKey) => number) =>
-    ({ diesel: fn("diesel"), h2: fn("h2"), bev: fn("bev") }) as Record<RouteKey, number>;
+  const mk = (fn: (k: RouteKey) => number) => porRotas(fn);
 
   return {
     iteracoes,

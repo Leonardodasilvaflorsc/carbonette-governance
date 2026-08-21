@@ -30,13 +30,26 @@ import { getPath, setPathMut } from "../engine/util";
 import { FIELDS, NUMERIC_PATHS } from "../fields";
 import { moeda, nf, pct } from "../format";
 import { useTco } from "../store";
-import { ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL, type McSpec, type RouteKey } from "../types";
+import { porRotas, ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL, type McSpec, type RouteKey } from "../types";
 import { Aviso, Dica, Secao } from "./ui";
 
 const clone = (s: Scenario): Scenario => JSON.parse(JSON.stringify(s));
 
 /** Pares e variáveis apresentados como cartões de equilíbrio. */
 const CARTOES: { varKey: string; par: [RouteKey, RouteKey] }[] = [
+  { varKey: "precoGnv", par: ["gnv", "diesel"] },
+  { varKey: "precoBio", par: ["bio", "diesel"] },
+  { varKey: "precoBio", par: ["bio", "gnv"] },
+  { varKey: "precoDiesel", par: ["gnv", "diesel"] },
+  { varKey: "precoDiesel", par: ["bio", "diesel"] },
+  { varKey: "capexGas", par: ["gnv", "diesel"] },
+  { varKey: "capexGas", par: ["bio", "diesel"] },
+  { varKey: "consumoGas", par: ["bio", "diesel"] },
+  { varKey: "utilizacaoEstacaoGas", par: ["bio", "diesel"] },
+  { varKey: "kmAno", par: ["gnv", "diesel"] },
+  { varKey: "precoCarbono", par: ["gnv", "diesel"] },
+  { varKey: "precoCarbono", par: ["bio", "diesel"] },
+  { varKey: "slipMetano", par: ["gnv", "diesel"] },
   { varKey: "precoH2", par: ["h2", "diesel"] },
   { varKey: "precoH2", par: ["h2", "bev"] },
   { varKey: "precoDiesel", par: ["h2", "diesel"] },
@@ -105,6 +118,10 @@ const MULTIPLICADORES: Record<string, Record<string, number>> = {
   conservador: {
     "h2.aPrecoKg": 1.3,
     "h2.bPrecoEnergiaRSKWh": 1.25,
+    "gas.gnvPrecoM3": 1.2,
+    "gas.bioPrecoM3": 1.25,
+    "gas.precoAquisicao": 1.1,
+    "gas.slipMetanoPct": 1.8,
     "h2.precoAquisicao": 1.15,
     "bev.precoAquisicao": 1.15,
     "bev.custoPackRSKWh": 1.2,
@@ -116,6 +133,10 @@ const MULTIPLICADORES: Record<string, Record<string, number>> = {
   agressivo: {
     "h2.aPrecoKg": 0.65,
     "h2.bPrecoEnergiaRSKWh": 0.8,
+    "gas.gnvPrecoM3": 0.85,
+    "gas.bioPrecoM3": 0.75,
+    "gas.precoAquisicao": 0.9,
+    "gas.slipMetanoPct": 0.4,
     "h2.precoAquisicao": 0.75,
     "bev.precoAquisicao": 0.75,
     "bev.custoPackRSKWh": 0.7,
@@ -203,9 +224,10 @@ export function AbaEquilibrio() {
           ))}
         </div>
         <p className="mt-2 text-[11px] leading-snug text-[#666666]">
-          Conservador: hidrogênio +30%, energia +20%, CAPEX das alternativas +15%, pack +20%, vida da bateria −20%,
-          diesel −10% e sem preço de carbono. Agressivo: hidrogênio −35%, CAPEX das alternativas −25%, pack −30%,
-          vida da bateria +25%, diesel +20% e carbono precificado pelo SBCE.
+          Conservador: hidrogênio +30%, gás +20%, biometano +25%, energia +20%, CAPEX das alternativas +10% a +15%,
+          pack +20%, vida da bateria −20%, metano não queimado +80%, diesel −10% e sem preço de carbono. Agressivo:
+          hidrogênio −35%, gás −15%, biometano −25%, CAPEX das alternativas −10% a −25%, pack −30%, vida da bateria
+          +25%, metano não queimado −60%, diesel +20% e carbono precificado pelo SBCE.
         </p>
       </Secao>
 
@@ -380,7 +402,7 @@ function Sensibilidade1D() {
 
 function MapaCalor() {
   const { scenario } = useTco();
-  const [vx, setVx] = useState("precoH2");
+  const [vx, setVx] = useState("precoBio");
   const [vy, setVy] = useState("precoDiesel");
   const [dados, setDados] = useState<ReturnType<typeof mapaCalor> | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -737,11 +759,11 @@ function MonteCarlo({
 /** Junta os lotes parciais da simulação em um único resultado. */
 function consolidar(partes: ResultadoMC[]): ResultadoMC {
   if (partes.length === 1) return partes[0];
-  const amostras = { diesel: [], h2: [], bev: [] } as Record<RouteKey, number[]>;
+  const amostras: Record<RouteKey, number[]> = porRotas(() => [] as number[]);
   const entradas: Record<string, number[]> = {};
   let iteracoes = 0;
-  const vit = { diesel: 0, h2: 0, bev: 0 } as Record<RouteKey, number>;
-  const melhor = { diesel: 0, h2: 0, bev: 0 } as Record<RouteKey, number>;
+  const vit: Record<RouteKey, number> = porRotas(() => 0);
+  const melhor: Record<RouteKey, number> = porRotas(() => 0);
   for (const p of partes) {
     iteracoes += p.iteracoes;
     for (const [chave, vals] of Object.entries(p.entradas)) {
@@ -757,8 +779,7 @@ function consolidar(partes: ResultadoMC[]): ResultadoMC {
     const s = [...arr].sort((a, b) => a - b);
     return s[Math.min(s.length - 1, Math.max(0, Math.round((q / 100) * (s.length - 1))))];
   };
-  const mk = (fn: (k: RouteKey) => number) =>
-    ({ diesel: fn("diesel"), h2: fn("h2"), bev: fn("bev") }) as Record<RouteKey, number>;
+  const mk = (fn: (k: RouteKey) => number) => porRotas(fn);
   return {
     iteracoes,
     amostras,

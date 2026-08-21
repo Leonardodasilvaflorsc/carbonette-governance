@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AbaEquilibrio } from "@/tco/components/aba-equilibrio";
 import { AbaRelatorio } from "@/tco/components/aba-relatorio";
 import { AbaResultados } from "@/tco/components/aba-resultados";
-import { TabBev, TabDiesel, TabH2, TabMissao } from "@/tco/components/abas-inputs";
+import { TabBev, TabDiesel, TabGas, TabH2, TabMissao } from "@/tco/components/abas-inputs";
 import { LogoAhs } from "@/tco/components/logo";
 import { PainelAuditoria } from "@/tco/components/painel-auditoria";
 import { Dica } from "@/tco/components/ui";
@@ -12,16 +12,17 @@ import { moeda, nf } from "@/tco/format";
 import { PRESETS } from "@/tco/presets";
 import { fraseVencedor } from "@/tco/resumo";
 import { TcoProvider, useTco } from "@/tco/store";
-import { ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL } from "@/tco/types";
+import { ROTAS_ALTERNATIVAS, ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL } from "@/tco/types";
 
 const ABAS = [
   { id: "missao", rotulo: "1. Missão" },
   { id: "diesel", rotulo: "2. Diesel" },
-  { id: "h2", rotulo: "3. Hidrogênio" },
-  { id: "bev", rotulo: "4. Elétrico" },
-  { id: "resultados", rotulo: "5. Resultados" },
-  { id: "equilibrio", rotulo: "6. Ponto de equilíbrio" },
-  { id: "relatorio", rotulo: "7. Relatório" },
+  { id: "gas", rotulo: "3. Gás / Biometano" },
+  { id: "h2", rotulo: "4. Hidrogênio" },
+  { id: "bev", rotulo: "5. Elétrico" },
+  { id: "resultados", rotulo: "6. Resultados" },
+  { id: "equilibrio", rotulo: "7. Ponto de equilíbrio" },
+  { id: "relatorio", rotulo: "8. Relatório" },
 ] as const;
 
 type AbaId = (typeof ABAS)[number]["id"];
@@ -49,7 +50,7 @@ function Cabecalho() {
             AHS TCO Fleet — Comparador de Custo Total de Propriedade
           </h1>
           <p className="text-[11px] leading-tight text-white/70">
-            Diesel · Hidrogênio · Elétrico — mesma missão de transporte, mesmo horizonte, mesma base de comparação
+            Diesel · Gás natural · Biometano · Hidrogênio · Elétrico — mesma missão, mesmo horizonte, mesma base
           </p>
         </div>
         <select
@@ -84,6 +85,8 @@ function ComparacaoRapida() {
   const { scenario, set } = useTco();
   const controles = [
     { path: "diesel.precoDieselL", rotulo: "Diesel", unidade: "R$/L", min: 3, max: 15, passo: 0.05, dec: 2 },
+    { path: "gas.gnvPrecoM3", rotulo: "Gás natural", unidade: "R$/m³", min: 1, max: 12, passo: 0.05, dec: 2 },
+    { path: "gas.bioPrecoM3", rotulo: "Biometano", unidade: "R$/m³", min: 1, max: 12, passo: 0.05, dec: 2 },
     { path: "h2.aPrecoKg", rotulo: "Hidrogênio", unidade: "R$/kg", min: 5, max: 90, passo: 0.5, dec: 2 },
     { path: "bev.teForaPontaRSMWh", rotulo: "Energia (TE fora de ponta)", unidade: "R$/MWh", min: 50, max: 1200, passo: 5, dec: 0 },
   ];
@@ -97,7 +100,11 @@ function ComparacaoRapida() {
         </span>
         {controles.map((c) => {
           const valor = getPath<number>(scenario, c.path);
-          const desabilitado = c.path === "h2.aPrecoKg" && modoH2 !== "A";
+          const desabilitado =
+            (c.path === "h2.aPrecoKg" && modoH2 !== "A") ||
+            (c.path === "gas.gnvPrecoM3" && scenario.gas.gnvMetodoPreco !== "m3") ||
+            (c.path === "gas.bioPrecoM3" &&
+              (scenario.gas.bioMetodoPreco !== "m3" || scenario.gas.bioModoSuprimento !== "A"));
           return (
             <label key={c.path} className={`flex items-center gap-2 text-[11px] ${desabilitado ? "opacity-40" : ""}`}>
               <span className="text-[#666666]">{c.rotulo}</span>
@@ -181,7 +188,7 @@ function PainelLateral() {
         })}
         <div className="border border-[#E2E2E2] bg-white p-2.5 text-[10px] leading-snug text-[#666666]">
           <div className="mb-1 text-[11px] font-semibold text-[#0D2B55]">Custo de abatimento</div>
-          {(["h2", "bev"] as const).map((r) => (
+          {ROTAS_ALTERNATIVAS.map((r) => (
             <div key={r} className="flex justify-between">
               <span>{ROUTE_LABEL[r]}</span>
               <span className="font-mono tabular-nums text-[#1A1A1A]">
@@ -240,6 +247,7 @@ function Conteudo() {
         <main className="tco-conteudo min-w-0 flex-1 p-4">
           {aba === "missao" && <TabMissao />}
           {aba === "diesel" && <TabDiesel />}
+          {aba === "gas" && <TabGas />}
           {aba === "h2" && <TabH2 />}
           {aba === "bev" && <TabBev />}
           {aba === "resultados" && <AbaResultados />}

@@ -2,7 +2,7 @@
 import type { Scenario } from "./defaults";
 import { nf, moeda, pct } from "./format";
 import type { ResultadoCenario, RouteKey } from "./types";
-import { GRUPO_LABEL, GRUPO_ORDEM, ROUTE_KEYS, ROUTE_LABEL } from "./types";
+import { GRUPO_LABEL, GRUPO_ORDEM, ROTAS_ALTERNATIVAS, ROUTE_KEYS, ROUTE_LABEL } from "./types";
 
 /** Uma frase objetiva dizendo qual rota vence e por quê. */
 export function fraseVencedor(r: ResultadoCenario): string {
@@ -33,7 +33,7 @@ export function sumarioExecutivo(s: Scenario, r: ResultadoCenario): string[] {
   );
   p.push(fraseVencedor(r));
 
-  const alt = ROUTE_KEYS.filter((k) => k !== "diesel") as RouteKey[];
+  const alt = ROTAS_ALTERNATIVAS;
   for (const k of alt) {
     const delta = r.rotas[k].tco - r.rotas.diesel.tco;
     const evitadas = r.rotas.diesel.emissoesTotaisT - r.rotas[k].emissoesTotaisT;

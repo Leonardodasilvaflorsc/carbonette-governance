@@ -14,9 +14,17 @@ export const CONST = {
   DENSIDADE_ARLA_KG_L: 1.09,
   /** Horas em um ano civil. */
   HORAS_ANO: 8760,
+  /** 1 MMBtu = 293,07 kWh. Usado na conversão de contratos de gás. */
+  MMBTU_KWH: 293.07,
+  /**
+   * Combustão completa do metano: CH4 + 2 O2 → CO2 + 2 H2O.
+   * 16,04 g de CH4 produzem 44,01 g de CO2 → 2,74 kgCO2 por kg de metano.
+   */
+  CO2_POR_KG_METANO: 2.74,
   /** Reserva operacional: fração do tanque efetivamente usada entre paradas. */
   USO_TANQUE_DIESEL: 0.9,
   USO_TANQUE_H2: 0.95,
+  USO_TANQUE_GAS: 0.9,
   /**
    * Faixas de eficiência do trem de força aceitas na verificação de
    * consistência (item 9.3 da especificação). São faixas de ciclo completo,
@@ -28,6 +36,8 @@ export const CONST = {
   EFIC_DIESEL: [0.25, 0.45] as [number, number],
   EFIC_FCEV: [0.35, 0.55] as [number, number],
   EFIC_BEV: [0.7, 1.0] as [number, number],
+  /** Ciclo Otto a gás: eficiência menor que a do ciclo Diesel equivalente. */
+  EFIC_GAS: [0.2, 0.4] as [number, number],
   /** Perda de capacidade que define o fim de vida convencional da bateria. */
   QUEDA_SOH_FIM_VIDA_PCT: 20,
 };

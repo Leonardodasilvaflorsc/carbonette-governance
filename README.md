@@ -73,9 +73,9 @@ We don't support custom domains (yet). If you want to deploy your project under 
 # AHS TCO Fleet — simulador de TCO comparativo de caminhões
 
 Aplicação de página única, em português do Brasil, que compara o **Custo Total
-de Propriedade** de três configurações de caminhão executando a **mesma missão
-de transporte**: diesel Proconve P8 com SCR, célula a combustível a hidrogênio
-(FCEV) e bateria elétrica (BEV).
+de Propriedade** de cinco configurações de caminhão executando a **mesma missão
+de transporte**: diesel Proconve P8 com SCR, gás natural veicular, biometano,
+célula a combustível a hidrogênio (FCEV) e bateria elétrica (BEV).
 
 Rota da aplicação: **`/tco`** (`npm run dev` e abrir `http://localhost:8080/tco`).
 
@@ -114,6 +114,16 @@ Rota da aplicação: **`/tco`** (`npm run dev` e abrir `http://localhost:8080/tc
   mínimo e a autonomia exigida pelo trecho mais longo, e adota o critério que
   ocorrer primeiro. O custo é projetado pela curva de aprendizado e abatido
   quando coberto pela garantia.
+- **Gás natural e biometano são o mesmo caminhão.** Motor, cilindros, estação e
+  manutenção são compartilhados; o que separa as duas rotas é o preço da
+  molécula, o poder calorífico, a pegada de carbono e o modo de suprimento. O
+  consumo é declarado na base do gás natural e corrigido automaticamente para o
+  poder calorífico maior do biometano. O ciclo HPDI traz de volta o piloto de
+  diesel, o consumo de ARLA e o pós-tratamento SCR.
+- **Metano não queimado.** O slip entra nas emissões multiplicado pelo GWP, e
+  só a parcela efetivamente queimada gera CO₂. É esse parâmetro que decide se o
+  gás natural fóssil tem ou não vantagem climática sobre o diesel: com 1% de
+  slip e GWP de 28, a vantagem cai para menos de 4%.
 - **Hidrogênio.** Os modos B (eletrólise) e C (biomassa) produzem um custo
   nivelado em R$/kg, que entra como preço na porta do veículo; o CAPEX dessas
   plantas não é lançado no fluxo do caminhão. A estação de abastecimento, essa

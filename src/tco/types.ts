@@ -8,12 +8,25 @@
  *  - Energia sempre em kWh, massa em kg (ou t quando explicitado no nome do campo).
  */
 
-export type RouteKey = "diesel" | "h2" | "bev";
+export type RouteKey = "diesel" | "gnv" | "bio" | "h2" | "bev";
 
-export const ROUTE_KEYS: RouteKey[] = ["diesel", "h2", "bev"];
+export const ROUTE_KEYS: RouteKey[] = ["diesel", "gnv", "bio", "h2", "bev"];
+
+/** Rotas alternativas, sempre comparadas contra o diesel. */
+export const ROTAS_ALTERNATIVAS: RouteKey[] = ["gnv", "bio", "h2", "bev"];
+
+/**
+ * Gás natural e biometano rodam no MESMO veículo: mesmo motor, mesmos
+ * cilindros, mesma estação. Mudam o preço da molécula, a pegada de carbono e
+ * o modo de suprimento. Por isso as duas rotas compartilham o bloco `gas` do
+ * cenário e só divergem nos campos de combustível.
+ */
+export const ROTAS_GAS: RouteKey[] = ["gnv", "bio"];
 
 export const ROUTE_LABEL: Record<RouteKey, string> = {
   diesel: "Diesel",
+  gnv: "Gás natural",
+  bio: "Biometano",
   h2: "Hidrogênio",
   bev: "Elétrico",
 };
@@ -21,9 +34,15 @@ export const ROUTE_LABEL: Record<RouteKey, string> = {
 /** Paleta AHS — a associação cor/rota deve ser idêntica em toda a aplicação. */
 export const ROUTE_COLOR: Record<RouteKey, string> = {
   diesel: "#666666",
+  gnv: "#D98C1F",
+  bio: "#2F8F6B",
   h2: "#8DC63F",
   bev: "#0D2B55",
 };
+
+/** Constrói um registro por rota a partir de uma função. */
+export const porRotas = <T,>(fn: (r: RouteKey) => T): Record<RouteKey, T> =>
+  Object.fromEntries(ROUTE_KEYS.map((r) => [r, fn(r)])) as Record<RouteKey, T>;
 
 export const AHS = {
   azul: "#0D2B55",
@@ -42,6 +61,10 @@ export type RegimeTributario = "lucroReal" | "lucroPresumido" | "simples";
 export type RotaH2 = "eletriseGrid" | "eletroliseRenovavel" | "biomassa" | "smr";
 export type CenarioCarbono = "zero" | "voluntario" | "sbce" | "cbam";
 export type ModoSuprimentoH2 = "A" | "B" | "C";
+export type ModoSuprimentoBio = "A" | "B";
+export type CicloGas = "otto" | "hpdi";
+export type ArmazenamentoGas = "GNC" | "GNL";
+export type MetodoPrecoGas = "m3" | "kg" | "mmbtu";
 export type QuimicaBateria = "LFP" | "NMC" | "semiSolida";
 export type ModalidadeEnergia = "cativoVerde" | "cativoAzul" | "livre" | "autoproducao";
 export type MetodoArla = "pctDiesel" | "litros100km";

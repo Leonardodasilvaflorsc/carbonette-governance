@@ -9,8 +9,12 @@
  * um dado publicado, o comentário e o tooltip dizem isso explicitamente.
  */
 import type {
+  ArmazenamentoGas,
   BaseValores,
+  CicloGas,
   McSpec,
+  MetodoPrecoGas,
+  ModoSuprimentoBio,
   CenarioCarbono,
   MetodoArla,
   ModalidadeEnergia,
@@ -80,6 +84,8 @@ export const DEFAULT_SCENARIO = {
     escDiesel: 1.0, // escalonamento REAL, % a.a. acima do IPCA
     escArla: 0.5,
     escEnergia: 1.0,
+    escGnv: 1.0,
+    escBio: -1.0, // ganho de escala esperado na produção de biometano
     escH2: -3.0, // curva de aprendizado do H2 (queda real esperada)
     escMaoObra: 1.0,
     escPecas: 0.5,
@@ -100,9 +106,11 @@ export const DEFAULT_SCENARIO = {
     iofPct: 1.5,
     estruturacaoPct: 1.0,
     jurosDiesel: 14.5,
+    jurosGas: 12.5, // Finame convencional; o gás não se enquadra em emissão zero
     jurosH2: 10.5,
     jurosBev: 10.5,
     aluguelMensalDiesel: 18000,
+    aluguelMensalGas: 21000,
     aluguelMensalH2: 32000,
     aluguelMensalBev: 28000,
   },
@@ -116,18 +124,23 @@ export const DEFAULT_SCENARIO = {
     pisCofinsCombustivelPct: 9.25,
     pisCofinsEnergiaPct: 9.25,
     icmsEnergiaPct: 18,
+    icmsGasPct: 18,
     icmsH2Pct: 18,
     depAnosDiesel: 5, // Depreciação fiscal — IN RFB 1.700/2017, veículos de carga
+    depAnosGas: 5,
     depAnosH2: 5,
     depAnosBev: 5,
     ipvaPctDiesel: 0, // caminhões são isentos de IPVA na maioria dos estados
+    ipvaPctGas: 0,
     ipvaPctH2: 0,
     ipvaPctBev: 0,
     // PHBC (Lei 14.948/2024), REHIDRO, MOVER, Rota 2030, isenções estaduais
     incentivoCapexPctDiesel: 0,
+    incentivoCapexPctGas: 0,
     incentivoCapexPctH2: 0,
     incentivoCapexPctBev: 0,
     incentivoAnualDiesel: 0,
+    incentivoAnualGas: 0,
     incentivoAnualH2: 0,
     incentivoAnualBev: 0,
   },
@@ -151,9 +164,25 @@ export const DEFAULT_SCENARIO = {
     precoCarbonoVoluntario: 40, // R$/tCO2e — mercado voluntário
     precoCarbonoSbce: 120, // SBCE, Lei 15.042/2024 — estimativa de partida
     precoCarbonoCbam: 450, // referência EU ETS convertida
+    // Potencial de aquecimento global do metano em 100 anos. AR5 = 28,
+    // AR6 = 27,9 para metano não fóssil e 29,8 para fóssil.
+    gwpMetano: 28,
+    // Combustão do metano: 2,74 kgCO2/kg. O upstream do gás natural cobre
+    // produção, processamento e distribuição.
+    fatorGnvCombustaoKgKg: 2.74,
+    fatorGnvUpstreamKgKg: 0.55,
+    // O CO2 da queima do biometano é biogênico e não entra no inventário.
+    fatorBioCombustaoKgKg: 0,
+    fatorBioUpstreamKgKg: 0.4, // digestão, upgrading e compressão
+    // Crédito por metano que deixaria de escapar de lagoa, aterro ou
+    // vinhaça. Informe negativo para capturar a emissão evitada.
+    fatorBioEvitadoKgKg: 0,
     cbioElegivel: false,
     cbioPreco: 95, // R$/CBIO
-    cbioPorAno: 0,
+    cbioPorAnoBio: 0,
+    cbioPorAnoH2: 0,
+    noxGnvGkm: 0.12, // motor a gás estequiométrico com catalisador de três vias
+    mpGnvGkm: 0.002,
     noxDieselGkm: 0.45, // Proconve P8
     mpDieselGkm: 0.01,
     noxH2Gkm: 0,
@@ -169,9 +198,11 @@ export const DEFAULT_SCENARIO = {
     beneficiosMes: 900,
     motoristasPorVeiculo: 1.1,
     treinamentoDiesel: 0,
+    treinamentoGas: 1800, // por motorista, uma vez — manuseio de gás pressurizado
     treinamentoH2: 4500, // por motorista, uma vez — manuseio de H2
     treinamentoBev: 2500,
     seguroPctDiesel: 3.0,
+    seguroPctGas: 3.4,
     seguroPctH2: 5.0, // prêmio maior — ativo mais caro e menos difundido
     seguroPctBev: 4.5,
     telemetriaMes: 180,
@@ -260,7 +291,122 @@ export const DEFAULT_SCENARIO = {
     receitaAnual: 900000, // base para o desconto exigido por clientes
   },
 
-  // ── 6. HIDROGÊNIO (FCEV) ──────────────────────────────────────────────────
+  // ── 6. GÁS NATURAL E BIOMETANO ────────────────────────────────────────────
+  // Um único veículo atende às duas rotas: o motor, os cilindros e a estação
+  // são os mesmos. Mudam o preço da molécula, a pegada de carbono e o modo de
+  // suprimento. Os campos com prefixo `gnv` e `bio` são o que as diferencia.
+  gas: {
+    modoPreco: "direto" as ModoPrecoVeiculo,
+    precoAquisicao: 790000, // cavalo mecânico a gás, ciclo Otto — estimativa
+    precoSemImpostos: 640000,
+    impFobUsd: 120000,
+    impFreteSeguroPct: 8,
+    impIiPct: 0,
+    impIpiPct: 0,
+    impIcmsPct: 18,
+    impDespachoPct: 3,
+    configuracao: "6x2",
+    pbtcT: 45,
+    taraBaseT: 13.5,
+    potenciaCv: 410,
+    ciclo: "otto" as CicloGas,
+    pilotoDieselPct: 0, // fração da energia vinda do diesel piloto, no HPDI
+    armazenamento: "GNC" as ArmazenamentoGas,
+    capacidadeKg: 160, // GNC a 200 bar; um conjunto GNL embarca bem mais
+    // Massa total por quilo armazenado, JÁ INCLUINDO o próprio gás: cilindros
+    // tipo III/IV a 200 bar somam cerca de 3 kg de casco por kg de metano.
+    // Um sistema GNL fica perto de 2,6 kg/kg.
+    massaSistemaKgPorKg: 4.0,
+    massaExtraSistemaKg: 120, // redutor, linhas, catalisador de três vias
+    pciKWhKg: 13.3, // gás natural típico; metano puro chega a 13,9
+    densidadeKgM3: 0.74, // a 20 °C e 1 atm, base em que o m³ é vendido
+    vidaUtilAnos: 10,
+    residual: [100, 74, 64, 56, 49, 43, 37, 32, 28, 24, 21] as number[],
+    // Consumo — motor a gás consome cerca de 15% mais energia que o Diesel
+    consumoUrbanoKg100km: 38,
+    consumoRegionalKg100km: 31,
+    consumoRodoviarioKg100km: 27,
+    cargaReferenciaT: 25,
+    ajusteConsumoPorTonKg100km: 0.75,
+    // Metano que escapa sem queimar. É o parâmetro que decide se a rota a gás
+    // fóssil tem ou não vantagem climática sobre o diesel.
+    slipMetanoPct: 1.0,
+    pctMarchaLenta: 12,
+    consumoMarchaLentaKgH: 1.8,
+    perdasBoilOffPctDia: 0, // relevante apenas no GNL
+    tempoAbastecimentoMin: 15,
+    eficienciaMotor: 0.34,
+    // Manutenção
+    preventivaPorKm: 0.2,
+    velasCusto: 1400,
+    velasIntervaloKm: 60000,
+    catalisadorCusto: 14000,
+    catalisadorVidaKm: 600000,
+    oleoVolumeL: 38,
+    oleoPrecoL: 34, // óleo de baixa cinza, exigido em motor a gás
+    oleoIntervaloKm: 30000,
+    outrosFluidosPctOleo: 25,
+    filtrosCusto: 800,
+    filtrosIntervaloKm: 30000,
+    inspecaoCilindrosAnos: 5,
+    inspecaoCilindrosCusto: 4500,
+    vidaNormativaCilindrosAnos: 20,
+    altoValorCusto: 26000,
+    altoValorVidaKm: 700000,
+    corretivaAno1: 4500,
+    corretivaCrescimentoPctAA: 18,
+    fatorVidaPneu: 0.98,
+    fatorVidaFreio: 1.0,
+    horasParadoManutAno: 130,
+    falhaProbAno: 0.9,
+    falhaHorasEvento: 16,
+    // Estação de abastecimento, compartilhada pelas duas rotas
+    usarEstacaoPropria: true,
+    estacaoCapex: 3500000, // compressor, estocagem e dispensers
+    estacaoVidaAnos: 15,
+    estacaoOpexPctCapexAno: 4,
+    estacaoConsumoKWhKg: 0.35, // compressão até 250 bar
+    estacaoPrecoEnergiaRSKWh: 0.65,
+    estacaoCapacidadeKgDia: 1500,
+    estacaoUtilizacaoPct: 60,
+    adequacaoGaragemCapex: 180000, // ventilação e detecção de gás
+    adequacaoGaragemOpexAno: 12000,
+    treinamentoRecorrenteAno: 2000,
+    zonaRestritaPctRotas: 0,
+    choqueResidualPct: 0,
+    // ── Combustível: gás natural fóssil ─────────────────────────────────
+    gnvMetodoPreco: "m3" as MetodoPrecoGas,
+    gnvPrecoM3: 4.3, // preço de posto; contratos de frota ficam abaixo
+    gnvPrecoKg: 5.81,
+    gnvPrecoMMBtu: 60,
+    gnvPrecoIncluiIcms: true,
+    gnvCustoLogisticoKg: 0, // GNC comprimido entregue, quando não há rede
+    gnvPerdasTransferenciaPct: 0.5,
+    // ── Combustível: biometano ──────────────────────────────────────────
+    bioModoSuprimento: "A" as ModoSuprimentoBio,
+    bioMetodoPreco: "m3" as MetodoPrecoGas,
+    bioPrecoM3: 3.9, // costuma sair abaixo do GNV quando há RenovaBio
+    bioPrecoKg: 5.27,
+    bioPrecoMMBtu: 55,
+    bioPrecoIncluiIcms: true,
+    bioCustoLogisticoKg: 0,
+    bioPerdasTransferenciaPct: 0.5,
+    bioPciKWhKg: 13.9, // biometano purificado é praticamente metano puro
+    bioDensidadeKgM3: 0.716,
+    // Modo B — produção própria a partir de biogás
+    bSubstratoTDia: 200, // dejetos, vinhaça ou resíduos sólidos
+    bCustoSubstratoRSt: 0, // resíduo próprio; informe o custo se for comprado
+    bRendimentoM3BiogasPorT: 55,
+    bTeorMetanoPct: 58,
+    bPerdaUpgradingPct: 3,
+    bCapexPlanta: 22000000, // biodigestor, upgrading e compressão
+    bOpexFixoPctAno: 6,
+    bOpexVariavelRSKg: 0.9,
+    bVidaPlantaAnos: 20,
+    bCreditoDigestatoRSt: 25, // biofertilizante vendido por tonelada tratada
+  },
+
+  // ── 7. HIDROGÊNIO (FCEV) ──────────────────────────────────────────────────
   h2: {
     modoPreco: "direto" as ModoPrecoVeiculo,
     precoAquisicao: 2400000, // FCEV pesado importado, 2026 — estimativa
@@ -275,7 +421,8 @@ export const DEFAULT_SCENARIO = {
     bateriaTampaoKWh: 70,
     bateriaTampaoKW: 200,
     massaPilhaKgPorKW: 1.6,
-    massaCilindroKgPorKgH2: 17, // tanques tipo IV, 350 bar, com suportes
+    // Massa total por quilo armazenado, já incluindo o próprio hidrogênio.
+    massaCilindroKgPorKgH2: 18, // tanques tipo IV, 350 bar, com suportes
     massaBateriaKgPorKWh: 6,
     capacidadeH2Kg: 60,
     pressaoBar: 350,
@@ -368,7 +515,7 @@ export const DEFAULT_SCENARIO = {
     choqueResidualPct: 0,
   },
 
-  // ── 7. ELÉTRICO (BEV) ─────────────────────────────────────────────────────
+  // ── 8. ELÉTRICO (BEV) ─────────────────────────────────────────────────────
   bev: {
     modoPreco: "direto" as ModoPrecoVeiculo,
     precoAquisicao: 1650000, // BEV pesado, 2026 — estimativa

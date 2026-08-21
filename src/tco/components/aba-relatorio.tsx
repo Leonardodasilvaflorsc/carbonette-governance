@@ -14,7 +14,7 @@ import {
 import { moeda, nf, pct } from "../format";
 import { sumarioExecutivo } from "../resumo";
 import { useTco } from "../store";
-import { GRUPO_LABEL, GRUPO_ORDEM, ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL } from "../types";
+import { GRUPO_LABEL, GRUPO_ORDEM, ROTAS_ALTERNATIVAS, ROUTE_COLOR, ROUTE_KEYS, ROUTE_LABEL } from "../types";
 import { Aviso, Secao } from "./ui";
 import { LogoAhs } from "./logo";
 
@@ -290,8 +290,9 @@ export function AbaRelatorio() {
                       <th key={r} className="p-2 text-right font-medium">{ROUTE_LABEL[r]} (R$/t·km)</th>
                     ))}
                     <th className="p-2 text-right font-medium">Vencedor</th>
-                    <th className="p-2 text-right font-medium">MAC H₂</th>
-                    <th className="p-2 text-right font-medium">MAC BEV</th>
+                    {ROTAS_ALTERNATIVAS.map((r) => (
+                      <th key={r} className="p-2 text-right font-medium">MAC {ROUTE_LABEL[r]}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="[&_td]:border-b [&_td]:border-[#EEEEEE] [&_td]:p-2 [&_td:not(:first-child)]:text-right [&_td:not(:first-child)]:font-mono [&_td:not(:first-child)]:tabular-nums">
@@ -299,16 +300,18 @@ export function AbaRelatorio() {
                     <td className="font-semibold">Cenário atual</td>
                     {ROUTE_KEYS.map((r) => <td key={r}>{nf(resultado.rotas[r].tcoPorTKm, 4)}</td>)}
                     <td style={{ color: ROUTE_COLOR[resultado.vencedor] }}>{ROUTE_LABEL[resultado.vencedor]}</td>
-                    <td>{resultado.mac.h2 === null ? "n/d" : nf(resultado.mac.h2, 0)}</td>
-                    <td>{resultado.mac.bev === null ? "n/d" : nf(resultado.mac.bev, 0)}</td>
+                    {ROTAS_ALTERNATIVAS.map((r) => (
+                      <td key={r}>{resultado.mac[r] === null ? "n/d" : nf(resultado.mac[r]!, 0)}</td>
+                    ))}
                   </tr>
                   {comparativos.map((c, i) => (
                     <tr key={i}>
                       <td>{c.nome}</td>
                       {ROUTE_KEYS.map((r) => <td key={r}>{nf(c.res.rotas[r].tcoPorTKm, 4)}</td>)}
                       <td style={{ color: ROUTE_COLOR[c.res.vencedor] }}>{ROUTE_LABEL[c.res.vencedor]}</td>
-                      <td>{c.res.mac.h2 === null ? "n/d" : nf(c.res.mac.h2, 0)}</td>
-                      <td>{c.res.mac.bev === null ? "n/d" : nf(c.res.mac.bev, 0)}</td>
+                      {ROTAS_ALTERNATIVAS.map((k) => (
+                        <td key={k}>{c.res.mac[k] === null ? "n/d" : nf(c.res.mac[k]!, 0)}</td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
